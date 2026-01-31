@@ -1,0 +1,6 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Qt_Remote/Qt_Remote.vcxproj" />
+</Solution>
