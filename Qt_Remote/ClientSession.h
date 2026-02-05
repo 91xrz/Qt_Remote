@@ -1,7 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QTcpSocket>
-
+#include "NetworkData.h"
 class ClientSession : public QObject
 {
     Q_OBJECT
@@ -26,4 +26,5 @@ private slots:
 
 private:
     QTcpSocket* m_socket;  // 持有 socket 指针
+	QByteArray m_buffer;   // 处理粘包的缓冲区
 };
