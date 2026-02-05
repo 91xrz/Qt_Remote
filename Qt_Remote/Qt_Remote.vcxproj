@@ -95,8 +95,16 @@
     <QtRcc Include="Qt_Remote.qrc" />
     <QtUic Include="Qt_Remote.ui" />
     <QtMoc Include="Qt_Remote.h" />
+    <ClCompile Include="ClientSession.cpp" />
+    <ClCompile Include="DeviceServer.cpp" />
     <ClCompile Include="Qt_Remote.cpp" />
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DeviceServer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="ClientSession.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

@@ -2,5 +2,5 @@
   <Configurations>
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="Qt_Remote/Qt_Remote.vcxproj" />
+  <Project Path="Qt_Remote/Qt_Remote.vcxproj" Id="b5a13e49-fb03-4446-82a1-45dace872f75" />
 </Solution>
