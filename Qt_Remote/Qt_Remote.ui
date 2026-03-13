@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>600</width>
-    <height>400</height>
+    <width>588</width>
+    <height>382</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,14 +17,14 @@
    <widget class="QPushButton" name="pushButton">
     <property name="geometry">
      <rect>
-      <x>80</x>
-      <y>150</y>
-      <width>84</width>
+      <x>30</x>
+      <y>30</y>
+      <width>101</width>
       <height>24</height>
      </rect>
     </property>
     <property name="text">
-     <string>PushButton</string>
+     <string>测试连接</string>
     </property>
    </widget>
   </widget>
@@ -33,8 +33,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>600</width>
-     <height>25</height>
+     <width>588</width>
+     <height>21</height>
     </rect>
    </property>
   </widget>
@@ -49,8 +49,6 @@
   <widget class="QStatusBar" name="statusBar"/>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <resources>
-  <include location="Qt_Remote.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>
