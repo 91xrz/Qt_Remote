@@ -22,6 +22,7 @@ set(SRC_FILES
     ClientSession.cpp
     DeviceServer.cpp
     Qt_Remote.cpp
+    CommandHandler.cpp
 )
 
 set(HDR_FILES
@@ -29,6 +30,7 @@ set(HDR_FILES
     DeviceServer.h
     NetworkData.h
     Qt_Remote.h
+    CommandHandler.h
 )
 
 set(UI_FILES

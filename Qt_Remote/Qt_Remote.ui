@@ -101,6 +101,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnTest">
+        <property name="text">
+         <string>功能测试</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacerActions">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -163,7 +170,7 @@
      <x>0</x>
      <y>0</y>
      <width>640</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>

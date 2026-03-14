@@ -10,8 +10,8 @@ public:
     explicit ClientSession(QTcpSocket* socket, QObject* parent = nullptr);
     qint64 sendRaw(const QByteArray& packet);
 signals:
-    // 收到指令了（比如对方想点击鼠标），发信号告诉逻辑层去执行
-    void commandReceived(QString cmdType, QByteArray data);
+    // 发包给业务层处理相应的命令
+    void ReceiveCommand(CmdType cmdType, QByteArray data);
 
     // 掉线了，通知 Server 把我从列表里删掉
     void sessionClosed(ClientSession* client);

@@ -3,7 +3,11 @@
 DeviceServer::DeviceServer(QObject* parent) : QObject(parent)
 {
 	m_server = new QTcpServer(this);// 创建 TCP 服务器对象 析构时会自动close()  可能涉及到手动close
+    m_cmdHandler = new CommandHandler(this);
     connect(m_server, &QTcpServer::newConnection, this, &DeviceServer::onNewConnection);
+
+    //本地测试业务
+    connect(m_cmdHandler, &CommandHandler::logMessage, this, &DeviceServer::logMessage);
 }
 
 bool DeviceServer::startListen(int port)
@@ -27,8 +31,14 @@ void DeviceServer::stopListen()
     emit logMessage("服务已停止监听");
 }
 
+void DeviceServer::testFunction()
+{
+    if (m_cmdHandler)
+        m_cmdHandler->MakeDriverInfo();
+}
+
 void DeviceServer::onNewConnection()
-{       // 1. 获取新连接 (生孩子)
+{       // 1. 获取新连接
     QTcpSocket* socket = m_server->nextPendingConnection();
     if (!socket) return;
 
@@ -40,7 +50,14 @@ void DeviceServer::onNewConnection()
     // 3. 保存 Session 指针 (防止内存泄漏或丢失控制权)
     m_sessions.append(session);
 
-    // 4. 连接 Session 的信号 (以后它那边有事发生，这里会收到通知)
+    //连接业务层和当前被控端 相应的信号进行处理
+    connect(session, &ClientSession::ReceiveCommand,
+        m_cmdHandler, &CommandHandler::onHandlerCommand);
+
+    connect(m_cmdHandler, &CommandHandler::sendPacket,
+        session, &ClientSession::sendRaw);
+
+
     // 比如：如果 Session 说“我结束了”，Server 就把它从列表里删掉
     connect(session, &ClientSession::sessionClosed, this, [=](ClientSession* s) {
         m_sessions.removeOne(s);

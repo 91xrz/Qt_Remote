@@ -63,6 +63,13 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         ui.lineEditPort->setEnabled(true);
     });
 
+    connect(ui.btnTest, &QPushButton::clicked, this, [=]() {
+        m_logic->testFunction();
+        });
+  
+
+
+
     connect(ui.btnClearLogs, &QPushButton::clicked, this, [=]() {
         ui.plainTextLogs->clear();
     });

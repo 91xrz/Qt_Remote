@@ -19,44 +19,42 @@ qint64 ClientSession::sendRaw(const QByteArray& packet) {
     return -1;
 }
 
-void ClientSession::onReadyRead() //同DealCommand()可能有参数
+void ClientSession::onReadyRead() //等同于DealCommand()可能有参数
 {
     // 这里处理“粘包”逻辑和协议解析 
     QByteArray data = m_socket->readAll();
     m_buffer.append(data);
 
-    // 2. 只要水缸里的水够做一个包，就一直做
+    //收包处理
     while (m_buffer.size() >= NetworkPacket::minSize()) {
 
         // A. 利用工具类：偷看头部，获取包的长度
         int packageSize = NetworkPacket::totalSize(m_buffer);
-
         // B. 如果包头损坏（比如没找到魔数），工具类通常会返回 -1 或 0
         if (packageSize == 0) {
             m_buffer.remove(0, 1); // 错位了，丢掉一个字节继续找
             continue;
         }
-
         // C. 水缸里的水还不够做一个包？那就等下一次 onReadyRead 再说
         if (m_buffer.size() < packageSize) {
             break;
         }
-
         // D. 水够了！把这个包单独舀出来
         QByteArray onePacketData = m_buffer.mid(0, packageSize);
-
         // E. 利用工具类：解包、校验
         NetworkPacket::UnpackResult result = NetworkPacket::unpack(onePacketData);
 
+
+
         if (result.isValid) {
-            // F. 校验成功，分发业务
-           // handlePacket(result.type, result.body);
+            // F. 校验成功，丢包给业务处理
+          emit ReceiveCommand(result.type, result.body);
         }
         else {
             qDebug() << "check failed";
         }
 
-        // G. 处理完了，把这部分水倒掉
+        // G. 处理完了
         m_buffer.remove(0, packageSize);
     }
 

@@ -3,7 +3,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include "ClientSession.h"
-
+#include "CommandHandler.h"
 
 
 #pragma execution_character_set("utf-8")
@@ -19,6 +19,8 @@ public:
     // 对外提供的接口：关闭服务
     void stopListen();
 
+    void testFunction();
+
 signals:
     // 信号：通知 UI 更新状态（比如“有人连接了”）
     // 注意：只发信号，绝对不要在 cpp 里写 ui->xxx
@@ -30,5 +32,6 @@ private slots:
 
 private:
     QTcpServer* m_server;
+    CommandHandler* m_cmdHandler;
 };
 

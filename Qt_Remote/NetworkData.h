@@ -6,8 +6,8 @@
 
 enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     None = 0,
-    Login = 1,
-    HeartBeat = 2,
+    DriverInfo = 1,
+    DirInfo = 2,
     MouseInput = 10,
     ScreenFrame = 20
 }; //业务命令类型
@@ -65,7 +65,6 @@ public:
         return packet;
     }
 	// 2.找到包头，检查魔数，计算总长度（头 + 数据 + 尾）
-    // ==========================================
     static int totalSize(const QByteArray& buffer) {
         if (buffer.size() < sizeof(PacketHeader)) return 0;
 
