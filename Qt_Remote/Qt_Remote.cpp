@@ -1,5 +1,30 @@
 #include "Qt_Remote.h"
 #include "ClientSession.h"
+#include <QNetworkInterface>
+
+namespace {
+QString getLocalIpv4Address()
+{
+    const auto interfaces = QNetworkInterface::allInterfaces();
+    for (const QNetworkInterface& iface : interfaces) {
+        if (!(iface.flags() & QNetworkInterface::IsUp) ||
+            !(iface.flags() & QNetworkInterface::IsRunning) ||
+            (iface.flags() & QNetworkInterface::IsLoopBack)) {
+            continue;
+        }
+
+        const auto entries = iface.addressEntries();
+        for (const QNetworkAddressEntry& entry : entries) {
+            const QHostAddress address = entry.ip();
+            if (address.protocol() == QAbstractSocket::IPv4Protocol) {
+                return address.toString();
+            }
+        }
+    }
+
+    return QStringLiteral("127.0.0.1");
+}
+}
 
 Qt_Remote::Qt_Remote(QWidget *parent)
     : QMainWindow(parent)
@@ -7,64 +32,39 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     ui.setupUi(this);
 
     m_logic = new DeviceServer(this);
+    ui.labelLocalIpValue->setText(getLocalIpv4Address());
+    ui.btnStopService->setEnabled(false);
 
     connect(m_logic, &DeviceServer::logMessage, this, [=](const QString& msg) {
         ui.statusBar->showMessage(msg);
-        ui.plainTextConnectionLogs->appendPlainText(msg);
+        ui.plainTextLogs->appendPlainText(msg);
     });
 
     connect(m_logic, &DeviceServer::clientConnected, this, [=](const QString& ip, int port) {
-        ui.labelStatusConnectionValue->setText("已连接");
-        ui.labelPeerOnlineValue->setText("在线");
-        ui.plainTextConnectionLogs->appendPlainText(QString("发现新连接: %1:%2").arg(ip).arg(port));
+        ui.plainTextLogs->appendPlainText(QString("客户端连接: %1:%2").arg(ip).arg(port));
     });
 
-    connect(ui.btnConnect, &QPushButton::clicked, this, [=]() {
+    connect(ui.btnStartService, &QPushButton::clicked, this, [=]() {
         const int port = ui.lineEditPort->text().toInt();
-        m_logic->startListen(port > 0 ? port : 8888);
+        const int actualPort = port > 0 ? port : 8888;
+        if (m_logic->startListen(actualPort)) {
+            ui.labelServiceStatusValue->setText("运行中");
+            ui.btnStartService->setEnabled(false);
+            ui.btnStopService->setEnabled(true);
+            ui.lineEditPort->setEnabled(false);
+        }
     });
 
-    connect(ui.btnDisconnect, &QPushButton::clicked, this, [=]() {
+    connect(ui.btnStopService, &QPushButton::clicked, this, [=]() {
         m_logic->stopListen();
-        ui.labelStatusConnectionValue->setText("未连接");
-        ui.labelPeerOnlineValue->setText("离线");
-    });
-
-    connect(ui.btnReconnect, &QPushButton::clicked, this, [=]() {
-        m_logic->stopListen();
-        const int port = ui.lineEditPort->text().toInt();
-        m_logic->startListen(port > 0 ? port : 8888);
-        ui.plainTextConnectionLogs->appendPlainText("执行重连操作");
-    });
-
-    connect(ui.btnStartControl, &QPushButton::clicked, this, [=]() {
-        ui.plainTextPacketLogs->appendPlainText("开始远程控制");
-    });
-
-    connect(ui.btnStopControl, &QPushButton::clicked, this, [=]() {
-        ui.plainTextPacketLogs->appendPlainText("停止远程控制");
-    });
-
-    connect(ui.btnLockMachine, &QPushButton::clicked, this, [=]() {
-        ui.plainTextPacketLogs->appendPlainText("发送控制命令: 锁机");
-    });
-
-    connect(ui.btnUnlockMachine, &QPushButton::clicked, this, [=]() {
-        ui.plainTextPacketLogs->appendPlainText("发送控制命令: 解锁");
-    });
-
-    connect(ui.btnShutdownMachine, &QPushButton::clicked, this, [=]() {
-        ui.plainTextPacketLogs->appendPlainText("发送控制命令: 关机");
+        ui.labelServiceStatusValue->setText("未启动");
+        ui.btnStartService->setEnabled(true);
+        ui.btnStopService->setEnabled(false);
+        ui.lineEditPort->setEnabled(true);
     });
 
     connect(ui.btnClearLogs, &QPushButton::clicked, this, [=]() {
-        ui.plainTextConnectionLogs->clear();
-        ui.plainTextPacketLogs->clear();
-        ui.plainTextErrorLogs->clear();
-    });
-
-    connect(ui.btnExportLogs, &QPushButton::clicked, this, [=]() {
-        ui.plainTextConnectionLogs->appendPlainText("导出日志: 功能预留");
+        ui.plainTextLogs->clear();
     });
 }
 

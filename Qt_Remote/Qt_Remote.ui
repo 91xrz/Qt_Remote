@@ -6,406 +6,126 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1280</width>
-    <height>860</height>
+    <width>640</width>
+    <height>480</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Qt 远程控制</string>
+   <string>被控端服务</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayoutMain">
     <item>
-     <widget class="QFrame" name="topToolbarFrame">
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
+     <widget class="QGroupBox" name="groupServerInfo">
+      <property name="title">
+       <string>服务信息</string>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutToolbar">
-       <item>
-        <widget class="QPushButton" name="btnConnect">
-         <property name="minimumSize">
-          <size>
-           <width>88</width>
-           <height>0</height>
-          </size>
-         </property>
+      <layout class="QFormLayout" name="formLayoutServerInfo">
+       <item row="0" column="0">
+        <widget class="QLabel" name="labelLocalIpTitle">
          <property name="text">
-          <string>连接</string>
+          <string>本机 IP：</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnDisconnect">
-         <property name="minimumSize">
-          <size>
-           <width>88</width>
-           <height>0</height>
-          </size>
-         </property>
+       <item row="0" column="1">
+        <widget class="QLabel" name="labelLocalIpValue">
          <property name="text">
-          <string>断开</string>
+          <string>--</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnReconnect">
-         <property name="minimumSize">
-          <size>
-           <width>88</width>
-           <height>0</height>
-          </size>
-         </property>
+       <item row="1" column="0">
+        <widget class="QLabel" name="labelPortTitle">
          <property name="text">
-          <string>重连</string>
+          <string>监听端口：</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnStartControl">
-         <property name="minimumSize">
+       <item row="1" column="1">
+        <widget class="QLineEdit" name="lineEditPort">
+         <property name="maximumSize">
           <size>
-           <width>88</width>
-           <height>0</height>
+           <width>160</width>
+           <height>16777215</height>
           </size>
          </property>
          <property name="text">
-          <string>开始控制</string>
+          <string>8888</string>
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnStopControl">
-         <property name="minimumSize">
-          <size>
-           <width>88</width>
-           <height>0</height>
-          </size>
-         </property>
+       <item row="2" column="0">
+        <widget class="QLabel" name="labelServiceStatusTitle">
          <property name="text">
-          <string>停止控制</string>
+          <string>服务状态：</string>
          </property>
         </widget>
        </item>
-       <item>
-        <spacer name="horizontalSpacerToolbar">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+       <item row="2" column="1">
+        <widget class="QLabel" name="labelServiceStatusValue">
+         <property name="text">
+          <string>未启动</string>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
+        </widget>
        </item>
       </layout>
      </widget>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayoutCenter">
+     <layout class="QHBoxLayout" name="horizontalLayoutActions">
       <item>
-       <layout class="QVBoxLayout" name="verticalLayoutLeftPanel">
-        <item>
-         <widget class="QGroupBox" name="groupConnectionParams">
-          <property name="title">
-           <string>连接参数</string>
-          </property>
-          <layout class="QGridLayout" name="gridLayoutConnection">
-           <item row="0" column="0">
-            <widget class="QLabel" name="labelTargetIp">
-             <property name="text">
-              <string>目标 IP：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLineEdit" name="lineEditTargetIp">
-             <property name="placeholderText">
-              <string>例如：192.168.1.100</string>
-             </property>
-             <property name="text">
-              <string>127.0.0.1</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="labelPort">
-             <property name="text">
-              <string>端口：</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLineEdit" name="lineEditPort">
-             <property name="maximumSize">
-              <size>
-               <width>120</width>
-               <height>16777215</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>8888</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="4">
-            <widget class="QCheckBox" name="checkBoxRememberAddress">
-             <property name="text">
-              <string>记住地址</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QGroupBox" name="groupRemoteView">
-          <property name="title">
-           <string>远程画面区</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayoutRemoteView">
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayoutRemoteActions">
-             <item>
-              <widget class="QPushButton" name="btnLockMachine">
-               <property name="text">
-                <string>锁机</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="btnUnlockMachine">
-               <property name="text">
-                <string>解锁</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QPushButton" name="btnShutdownMachine">
-               <property name="text">
-                <string>关机</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <spacer name="horizontalSpacerRemoteActions">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>40</width>
-                 <height>20</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <widget class="QLabel" name="labelRemoteDesktop">
-             <property name="minimumSize">
-              <size>
-               <width>720</width>
-               <height>420</height>
-              </size>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::Box</enum>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-             <property name="text">
-              <string>远程桌面显示区域
-(QLabel / QGraphicsView / 自定义 QWidget)</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QGroupBox" name="groupStatusPanel">
+       <widget class="QPushButton" name="btnStartService">
         <property name="minimumSize">
          <size>
-          <width>280</width>
+          <width>100</width>
           <height>0</height>
          </size>
         </property>
-        <property name="title">
-         <string>状态信息</string>
+        <property name="text">
+         <string>启动服务</string>
         </property>
-        <layout class="QFormLayout" name="formLayoutStatus">
-         <item row="0" column="0">
-          <widget class="QLabel" name="labelStatusConnectionTitle">
-           <property name="text">
-            <string>连接状态：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="labelStatusConnectionValue">
-           <property name="text">
-            <string>未连接</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <widget class="QLabel" name="labelLatencyTitle">
-           <property name="text">
-            <string>延迟 ms：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QLabel" name="labelLatencyValue">
-           <property name="text">
-            <string>--</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="labelResolutionTitle">
-           <property name="text">
-            <string>分辨率：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QLabel" name="labelResolutionValue">
-           <property name="text">
-            <string>--</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="0">
-          <widget class="QLabel" name="labelFpsTitle">
-           <property name="text">
-            <string>帧率 FPS：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1">
-          <widget class="QLabel" name="labelFpsValue">
-           <property name="text">
-            <string>--</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="0">
-          <widget class="QLabel" name="labelRxSpeedTitle">
-           <property name="text">
-            <string>收包速度：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <widget class="QLabel" name="labelRxSpeedValue">
-           <property name="text">
-            <string>--</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="labelTxSpeedTitle">
-           <property name="text">
-            <string>发包速度：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="5" column="1">
-          <widget class="QLabel" name="labelTxSpeedValue">
-           <property name="text">
-            <string>--</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="labelPeerOnlineTitle">
-           <property name="text">
-            <string>对方在线状态：</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="1">
-          <widget class="QLabel" name="labelPeerOnlineValue">
-           <property name="text">
-            <string>离线</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="0" colspan="2">
-          <spacer name="verticalSpacerStatus">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
        </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnStopService">
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>停止服务</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacerActions">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
       </item>
      </layout>
     </item>
     <item>
-     <widget class="QGroupBox" name="groupLogPanel">
+     <widget class="QGroupBox" name="groupLogs">
       <property name="title">
-       <string>日志区</string>
+       <string>日志</string>
       </property>
       <layout class="QVBoxLayout" name="verticalLayoutLogs">
        <item>
-        <widget class="QTabWidget" name="tabWidgetLogs">
-         <widget class="QWidget" name="tabConnectionLogs">
-          <attribute name="title">
-           <string>连接日志</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayoutConnectionLogs">
-           <item>
-            <widget class="QPlainTextEdit" name="plainTextConnectionLogs">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="tabPacketLogs">
-          <attribute name="title">
-           <string>收发包日志</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayoutPacketLogs">
-           <item>
-            <widget class="QPlainTextEdit" name="plainTextPacketLogs">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="tabErrorLogs">
-          <attribute name="title">
-           <string>错误日志</string>
-          </attribute>
-          <layout class="QVBoxLayout" name="verticalLayoutErrorLogs">
-           <item>
-            <widget class="QPlainTextEdit" name="plainTextErrorLogs">
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+        <widget class="QPlainTextEdit" name="plainTextLogs">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
@@ -430,13 +150,6 @@
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QPushButton" name="btnExportLogs">
-           <property name="text">
-            <string>导出日志</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
       </layout>
@@ -449,7 +162,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1280</width>
+     <width>640</width>
      <height>23</height>
     </rect>
    </property>
