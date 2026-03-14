@@ -16,6 +16,17 @@ bool DeviceServer::startListen(int port)
     return true;
 }
 
+void DeviceServer::stopListen()
+{
+    if (!m_server->isListening()) {
+        emit logMessage("服务未在监听状态");
+        return;
+    }
+
+    m_server->close();
+    emit logMessage("服务已停止监听");
+}
+
 void DeviceServer::onNewConnection()
 {       // 1. 获取新连接 (生孩子)
     QTcpSocket* socket = m_server->nextPendingConnection();
