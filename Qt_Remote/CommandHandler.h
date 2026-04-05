@@ -1,6 +1,12 @@
 #pragma once
 #include <QObject>
 #include <QDebug>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QDesktopServices>
+#include <QUrl>
+
 #include "NetworkData.h"
 
 class CommandHandler :  public QObject
@@ -22,8 +28,11 @@ signals:
 public:
 	//业务代码
 	void MakeDriverInfo();
-	void MakeDirInfo();
+	// 传入主控端请求的路径数据包
+	void MakeDirInfo(const QByteArray& body);
 
-
+	void RunFile(const QByteArray& body);
+	void DeleFile(const QByteArray& body);
+	void DownLoadFile(const QByteArray& body);
 };
 

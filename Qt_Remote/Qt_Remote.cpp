@@ -72,10 +72,14 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     connect(ui.btnFileManager, &QPushButton::clicked, this, [this]() {
         if (!m_fileManagerWidget) {
             m_fileManagerWidget = new FileManagerWidget(this);
+
+            // 【关键修复】强制将这个附带 parent 的 Widget 设为独立窗口
+            m_fileManagerWidget->setWindowFlags(Qt::Window);
             m_fileManagerWidget->setWindowTitle(QStringLiteral("远程文件管理器"));
             m_fileManagerWidget->resize(900, 560);
         }
 
+        // 显示、置顶、激活
         m_fileManagerWidget->show();
         m_fileManagerWidget->raise();
         m_fileManagerWidget->activateWindow();

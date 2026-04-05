@@ -8,10 +8,67 @@ enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     None = 0,
     DriverInfo = 1,
     DirInfo = 2,
+    RunFile = 3,
+    DeleFile =4,
+    DownLoadFile=5,
     MouseInput = 10,
     ScreenFrame = 20
 }; //业务命令类型
-//TODO:鼠标输入、键盘输入等命令类型可以继续添加
+
+
+//鼠标事件
+enum class MouseEventType : uint8_t {
+    None =0,
+    Move,         // Mouse move
+    LeftPress,    // Left button press
+    LeftRelease,  // Left button release
+    LeftDoubleClick, // Left button double click
+    RightPress,   // Right button press
+    RightRelease, // Right button release
+    RightDoubleClick, // Right button double click
+    MiddlePress,  // Middle button press
+    MiddleRelease,// Middle button release
+    MiddleDoubleClick, // Middle button double click
+    Scroll,       // Mouse scroll
+};
+struct MouseEvent {
+    // 构造函数初始化
+    MouseEvent() : eventType(MouseEventType::None), x(0), y(0), scrollDelta(0) {}
+
+    MouseEventType eventType; // 鼠标事件类型 (占 1 字节)
+    int32_t x;                // 鼠标 X 坐标 (替换原来的 POINT pos，占 4 字节)
+    int32_t y;                // 鼠标 Y 坐标 (替换原来的 POINT pos，占 4 字节)
+    int32_t scrollDelta;      // 滚轮滚动量 (占 4 字节)
+};
+
+// 文件结构体
+typedef struct fileinfo // 文件信息
+{
+    fileinfo()
+    {
+        memset(szFileName, 0, sizeof(szFileName));
+        bIsDir = false;
+        bIsInvild = false;
+        HasNext = true;
+    }
+
+    char szFileName[260]; // 文件名 (支持中文需用 Local8Bit)
+    bool bIsDir;          // 是否是文件夹 (改成小写 bool)
+    bool bIsInvild;       // 是否是无效文件
+    bool HasNext;         // 是否有下一个文件
+
+} FILEINFO, * PFILEINFO;
+
+typedef struct RemoteComputerInfo {
+    int screen_width;
+    int screen_height;
+    std::string os_version;
+    std::string computer_name;
+    std::string ip_address;  // 添加IP地址字段
+
+    RemoteComputerInfo() : screen_width(0), screen_height(0), os_version(""), computer_name(""), ip_address("") {}
+}RCInfo, * PRCINFO;
+
 
 // 2. 协议头结构体
 // 注意：校验位通常不放在头里，而是放在整个包的最后，或者头的最后

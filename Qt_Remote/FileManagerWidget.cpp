@@ -15,7 +15,9 @@
 #include <QTableView>
 #include <QTreeView>
 #include <QVBoxLayout>
-
+#include <QDir>
+#include <QFileInfo>
+#include <QFileInfoList>
 namespace {
 constexpr auto kDummyText = "Loading...";
 }
@@ -92,9 +94,15 @@ void FileManagerWidget::loadTestDrives()
 {
     const QIcon driveIcon = QApplication::style()->standardIcon(QStyle::SP_DriveHDIcon);
 
-    const QStringList drives = { QStringLiteral("C:"), QStringLiteral("D:") };
-    for (const QString& driveName : drives) {
-        auto* driveItem = new QStandardItem(driveIcon, driveName);
+    // 获取本机所有盘符
+    QFileInfoList drives = QDir::drives();
+    for (const QFileInfo& driveInfo : drives) {
+        QString drivePath = driveInfo.absoluteFilePath(); // 例如 "C:/"
+        auto* driveItem = new QStandardItem(driveIcon, drivePath);
+
+        // 【关键绑定】把真实路径隐藏存储在节点里，供后续使用
+        driveItem->setData(drivePath, Qt::UserRole + 1);
+
         addDummyNode(driveItem);
         m_treeModel->appendRow(driveItem);
     }
@@ -126,43 +134,58 @@ bool FileManagerWidget::hasDummyChild(QStandardItem* parentItem) const
 
 void FileManagerWidget::populateChildrenForItem(QStandardItem* parentItem)
 {
-    if (!parentItem) {
-        return;
-    }
+    if (!parentItem) return;
 
+    // 取出此节点代表的真实路径
+    QString path = parentItem->data(Qt::UserRole + 1).toString();
+    QDir dir(path);
+
+    // 左侧目录树只显示文件夹，不显示文件。过滤掉 . 和 ..
+    QFileInfoList dirList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     const QIcon dirIcon = QApplication::style()->standardIcon(QStyle::SP_DirIcon);
-    const QIcon fileIcon = QApplication::style()->standardIcon(QStyle::SP_FileIcon);
 
-    for (int i = 1; i <= 2; ++i) {
-        auto* folderItem = new QStandardItem(dirIcon, QStringLiteral("Folder_%1").arg(i));
+    for (const QFileInfo& dirInfo : dirList) {
+        auto* folderItem = new QStandardItem(dirIcon, dirInfo.fileName());
+        folderItem->setData(dirInfo.absoluteFilePath(), Qt::UserRole + 1);
+
+        // 只要是文件夹，就给它加个 Loading 占位符，实现懒加载
         addDummyNode(folderItem);
         parentItem->appendRow(folderItem);
-    }
-
-    for (int i = 1; i <= 2; ++i) {
-        auto* fileItem = new QStandardItem(fileIcon, QStringLiteral("Readme_%1.txt").arg(i));
-        parentItem->appendRow(fileItem);
     }
 }
 
 void FileManagerWidget::showFilesForIndex(const QModelIndex& index)
 {
     m_tableModel->removeRows(0, m_tableModel->rowCount());
-    if (!index.isValid()) {
-        return;
-    }
+    if (!index.isValid()) return;
 
-    const QString parentName = m_treeModel->itemFromIndex(index)->text();
-    const QString now = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"));
+    QStandardItem* item = m_treeModel->itemFromIndex(index);
+    QString path = item->data(Qt::UserRole + 1).toString();
+    QDir dir(path);
 
-    for (int i = 1; i <= 5; ++i) {
+    // 右侧表格既要显示文件夹，也要显示文件，文件夹排在前面
+    QFileInfoList fileList = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot, QDir::DirsFirst | QDir::Name);
+
+    for (const QFileInfo& fileInfo : fileList) {
         QList<QStandardItem*> row;
-        const bool isDir = (i % 2 == 0);
+        const bool isDir = fileInfo.isDir();
         const QIcon icon = QApplication::style()->standardIcon(isDir ? QStyle::SP_DirIcon : QStyle::SP_FileIcon);
-        row << new QStandardItem(icon, QStringLiteral("%1_Item_%2").arg(parentName).arg(i));
-        row << new QStandardItem(isDir ? QStringLiteral("--") : QStringLiteral("%1 KB").arg(i * 128));
-        row << new QStandardItem(isDir ? QStringLiteral("文件夹") : QStringLiteral("文本文件"));
-        row << new QStandardItem(now);
+
+        // 第一列：文件名
+        auto* nameItem = new QStandardItem(icon, fileInfo.fileName());
+        nameItem->setData(fileInfo.absoluteFilePath(), Qt::UserRole + 1); // 也绑上路径，方便以后右键操作
+        row << nameItem;
+
+        // 第二列：大小
+        QString sizeStr = isDir ? "--" : QString::number(fileInfo.size() / 1024) + " KB";
+        row << new QStandardItem(sizeStr);
+
+        // 第三列：类型
+        row << new QStandardItem(isDir ? QStringLiteral("文件夹") : fileInfo.suffix() + QStringLiteral(" 文件"));
+
+        // 第四列：修改时间
+        row << new QStandardItem(fileInfo.lastModified().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")));
+
         m_tableModel->appendRow(row);
     }
 }
