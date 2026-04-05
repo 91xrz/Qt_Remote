@@ -34,7 +34,7 @@ void DeviceServer::stopListen()
 void DeviceServer::testFunction()
 {
     if (m_cmdHandler)
-        m_cmdHandler->MakeDriverInfo();
+        m_cmdHandler->SendScreen();
 }
 
 void DeviceServer::onNewConnection()

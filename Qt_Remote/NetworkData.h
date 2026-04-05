@@ -12,7 +12,7 @@ enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     DeleFile =4,
     DownLoadFile=5,
     MouseInput = 10,
-    ScreenFrame = 20
+    ScreenData = 20
 }; //业务命令类型
 
 

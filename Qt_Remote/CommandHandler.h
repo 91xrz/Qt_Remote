@@ -6,7 +6,11 @@
 #include <QFileInfo>
 #include <QDesktopServices>
 #include <QUrl>
-
+#include <windows.h>
+#include <QGuiApplication>
+#include <QScreen>
+#include <QPixmap>
+#include <QBuffer>
 #include "NetworkData.h"
 
 class CommandHandler :  public QObject
@@ -34,5 +38,7 @@ public:
 	void RunFile(const QByteArray& body);
 	void DeleFile(const QByteArray& body);
 	void DownLoadFile(const QByteArray& body);
+	void HandleMouseEvent(const QByteArray& body);
+	void SendScreen();
 };
 
