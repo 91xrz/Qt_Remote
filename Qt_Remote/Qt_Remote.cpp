@@ -1,5 +1,6 @@
 #include "Qt_Remote.h"
 #include "ClientSession.h"
+#include "FileManagerWidget.h"
 #include <QNetworkInterface>
 
 namespace {
@@ -28,6 +29,7 @@ QString getLocalIpv4Address()
 
 Qt_Remote::Qt_Remote(QWidget *parent)
     : QMainWindow(parent)
+    , m_fileManagerWidget(nullptr)
 {
     ui.setupUi(this);
 
@@ -66,8 +68,18 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     connect(ui.btnTest, &QPushButton::clicked, this, [=]() {
         m_logic->testFunction();
         });
-  
 
+    connect(ui.btnFileManager, &QPushButton::clicked, this, [this]() {
+        if (!m_fileManagerWidget) {
+            m_fileManagerWidget = new FileManagerWidget(this);
+            m_fileManagerWidget->setWindowTitle(QStringLiteral("远程文件管理器"));
+            m_fileManagerWidget->resize(900, 560);
+        }
+
+        m_fileManagerWidget->show();
+        m_fileManagerWidget->raise();
+        m_fileManagerWidget->activateWindow();
+        });
 
 
     connect(ui.btnClearLogs, &QPushButton::clicked, this, [=]() {

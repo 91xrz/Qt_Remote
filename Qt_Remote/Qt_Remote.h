@@ -4,6 +4,8 @@
 #include "ui_Qt_Remote.h"
 #include "DeviceServer.h"
 
+class FileManagerWidget;
+
 #pragma execution_character_set("utf-8")
 // 视图层
 class Qt_Remote : public QMainWindow
@@ -17,6 +19,7 @@ public:
 private:
     Ui::Qt_RemoteClass ui;
     DeviceServer* m_logic; // 持有逻辑对象
+    FileManagerWidget* m_fileManagerWidget;
 private slots:
 
 };
