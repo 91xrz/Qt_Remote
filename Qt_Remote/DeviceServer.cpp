@@ -34,7 +34,7 @@ void DeviceServer::stopListen()
 void DeviceServer::testFunction()
 {
     if (m_cmdHandler)
-        m_cmdHandler->SendScreen();
+        m_cmdHandler->LockMachine(QByteArray());
 }
 
 void DeviceServer::onNewConnection()

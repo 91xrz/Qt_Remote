@@ -24,6 +24,7 @@ set(SRC_FILES
     Qt_Remote.cpp
     CommandHandler.cpp
     FileManagerWidget.cpp
+    LockScreenWidget.cpp
 )
 
 set(HDR_FILES

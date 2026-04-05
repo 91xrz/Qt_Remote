@@ -12,12 +12,21 @@
 #include <QPixmap>
 #include <QBuffer>
 #include "NetworkData.h"
-
+#include "LockScreenWidget.h"
 class CommandHandler :  public QObject
 {
 	Q_OBJECT
 public:
-	explicit CommandHandler(QObject* parent = nullptr) : QObject(parent) {}
+	explicit CommandHandler(QObject* parent = nullptr) : QObject(parent) 
+	{
+		m_lockWidget = new LockScreenWidget();
+
+		// 如果被控端本地有人按了 Insert 键，也要向主控端发个包通知一下（可选）
+		connect(m_lockWidget, &LockScreenWidget::unlockedLocally, this, [=]() {
+			emit logMessage("【调试】本地用户已通过 Insert 键解锁");
+			emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
+			});
+	}
 
 public slots:
 	void onHandlerCommand(CmdType type, QByteArray body);
@@ -40,5 +49,9 @@ public:
 	void DownLoadFile(const QByteArray& body);
 	void HandleMouseEvent(const QByteArray& body);
 	void SendScreen();
+	void LockMachine(const QByteArray& /*body*/);
+	void UnlockMachine(const QByteArray& /*body*/);
+private:
+	LockScreenWidget* m_lockWidget = nullptr;
 };
 

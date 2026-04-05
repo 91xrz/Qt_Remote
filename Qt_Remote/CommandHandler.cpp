@@ -354,3 +354,24 @@ void CommandHandler::SendScreen()
     // 4. 打包发送 
     emit sendPacket(NetworkPacket::pack(CmdType::ScreenData, bytes));
 }
+
+void CommandHandler::LockMachine(const QByteArray&)
+{
+    if (m_lockWidget->isHidden()) {
+        m_lockWidget->lock();
+        emit logMessage("【调试】机器已锁定");
+    }
+    else {
+        // 如果已经锁了，就回一个失败或者通知的包
+        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, QByteArray()));
+    }
+}
+
+void CommandHandler::UnlockMachine(const QByteArray&)
+{
+    m_lockWidget->unlock();
+
+    // 发送解锁成功的回执 
+    emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
+    emit logMessage("【调试】机器已解锁");
+}
