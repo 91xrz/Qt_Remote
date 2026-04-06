@@ -20,7 +20,7 @@ LockScreenWidget::LockScreenWidget(QWidget* parent) : QWidget(parent) {
 }
 
 void LockScreenWidget::lock() {
-    // 全屏显示 (完美替代 MFC 的 GetSystemMetrics 计算大小)
+    // 全屏显示
     this->showFullScreen();
 
     // 隐藏鼠标指针

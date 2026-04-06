@@ -20,6 +20,12 @@ void  CommandHandler::onHandlerCommand(CmdType type, QByteArray body)
     case CmdType::MouseInput:
         HandleMouseEvent(body);
         break;
+    case CmdType::LockMachine:
+        LockMachine(body);
+        break;
+    case CmdType::UnLockMachine:
+        UnlockMachine(body);
+        break;
 	default:
 		break;
 	}

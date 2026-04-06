@@ -2,7 +2,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_Qt_Remote.h"
-#include "DeviceServer.h"
+//#include "DeviceServer.h"
 
 class FileManagerWidget;
 
@@ -18,7 +18,7 @@ public:
 
 private:
     Ui::Qt_RemoteClass ui;
-    DeviceServer* m_logic; // 持有逻辑对象
+   //DeviceServer* m_logic; // 持有逻辑对象
     FileManagerWidget* m_fileManagerWidget;
 private slots:
 

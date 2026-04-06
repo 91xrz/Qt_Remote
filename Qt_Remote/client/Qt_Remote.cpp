@@ -1,5 +1,5 @@
 #include "Qt_Remote.h"
-#include "ClientSession.h"
+//#include "ClientSession.h"
 #include "FileManagerWidget.h"
 #include <QNetworkInterface>
 
@@ -33,6 +33,7 @@ Qt_Remote::Qt_Remote(QWidget *parent)
 {
     ui.setupUi(this);
 
+    /*
     m_logic = new DeviceServer(this);
     ui.labelLocalIpValue->setText(getLocalIpv4Address());
     ui.btnStopService->setEnabled(false);
@@ -89,6 +90,7 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     connect(ui.btnClearLogs, &QPushButton::clicked, this, [=]() {
         ui.plainTextLogs->clear();
     });
+    */
 }
 
 Qt_Remote::~Qt_Remote()

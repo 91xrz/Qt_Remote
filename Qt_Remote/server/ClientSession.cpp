@@ -14,8 +14,7 @@ ClientSession::ClientSession(QTcpSocket* socket, QObject* parent)
 
 qint64 ClientSession::sendRaw(const QByteArray& packet) {
 
-    QByteArray hex = packet.toHex(' ');  // 用空格分隔更清晰
-    qDebug() << "Send packet(hex):" << hex;
+
 
     if (m_socket->state() == QAbstractSocket::ConnectedState) {
 		return m_socket->write(packet);//       发包send();
