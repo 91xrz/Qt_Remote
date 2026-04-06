@@ -1,71 +1,95 @@
 #include "DeviceServer.h"
 
-DeviceServer::DeviceServer(QObject* parent) : QObject(parent)
-{
-	m_server = new QTcpServer(this);// 创建 TCP 服务器对象 析构时会自动close()  可能涉及到手动close
-    m_cmdHandler = new CommandHandler(this);
-    connect(m_server, &QTcpServer::newConnection, this, &DeviceServer::onNewConnection);
+#include <QTcpSocket>
+#include "ClientSession.h"
 
-    //本地测试业务
-    connect(m_cmdHandler, &CommandHandler::logMessage, this, &DeviceServer::logMessage);
+DeviceServer::DeviceServer(QObject* parent)
+    : QObject(parent), m_server(new QTcpServer(this))
+{
+    connect(m_server, &QTcpServer::newConnection, this, &DeviceServer::onNewConnection);
 }
 
-bool DeviceServer::startListen(int port)
+bool DeviceServer::startListen(quint16 port)
 {
+    if (m_server->isListening()) {
+        emit logMessage(QStringLiteral("服务已在监听端口 %1").arg(m_server->serverPort()));
+        return true;
+    }
+
     if (!m_server->listen(QHostAddress::Any, port)) {
-        emit logMessage("监听失败: " + m_server->errorString());
+        emit statusChanged(QStringLiteral("监听失败"));
+        emit logMessage(QStringLiteral("监听失败: %1").arg(m_server->errorString()));
         return false;
     }
-    emit logMessage("服务启动成功，端口: " + QString::number(port));
+
+    emit statusChanged(QStringLiteral("监听中"));
+    emit logMessage(QStringLiteral("服务启动成功，监听端口: %1").arg(m_server->serverPort()));
     return true;
 }
 
 void DeviceServer::stopListen()
 {
     if (!m_server->isListening()) {
-        emit logMessage("服务未在监听状态");
+        emit logMessage(QStringLiteral("服务未在监听状态"));
         return;
     }
 
     m_server->close();
-    emit logMessage("服务已停止监听");
+    emit statusChanged(QStringLiteral("未监听"));
+    emit logMessage(QStringLiteral("服务已停止监听"));
 }
 
-void DeviceServer::testFunction()
+bool DeviceServer::isListening() const
 {
-    if (m_cmdHandler)
-        m_cmdHandler->LockMachine(QByteArray());
+    return m_server->isListening();
+}
+
+quint16 DeviceServer::listeningPort() const
+{
+    return m_server->serverPort();
+}
+
+int DeviceServer::sessionCount() const
+{
+    return m_sessions.size();
 }
 
 void DeviceServer::onNewConnection()
-{       // 1. 获取新连接
-    QTcpSocket* socket = m_server->nextPendingConnection();
-    if (!socket) return;
+{
+    while (m_server->hasPendingConnections()) {
+        QTcpSocket* socket = m_server->nextPendingConnection();
+        if (!socket) {
+            continue;
+        }
 
-    QString ip = socket->peerAddress().toString();
+        auto* session = new ClientSession(socket, this);
+        m_sessions.append(session);
 
-    // 2. 【关键】创建 Session 并移交 Socket (过继孩子)
-    ClientSession* session = new ClientSession(socket, this);
+        connect(session, &ClientSession::logMessage, this, &DeviceServer::logMessage);
+        connect(session, &ClientSession::commandReceived, this,
+            [this, session](CmdType type, const QByteArray&) {
+                emit logMessage(QStringLiteral("收到命令: %1 (来自 %2:%3)")
+                    .arg(static_cast<int>(type))
+                    .arg(session->peerAddress())
+                    .arg(session->peerPort()));
+            });
 
-    // 3. 保存 Session 指针 (防止内存泄漏或丢失控制权)
-    m_sessions.append(session);
-
-    //连接业务层和当前被控端 相应的信号进行处理
-    connect(session, &ClientSession::ReceiveCommand,
-        m_cmdHandler, &CommandHandler::onHandlerCommand);
-
-    connect(m_cmdHandler, &CommandHandler::sendPacket,
-        session, &ClientSession::sendRaw);
-
-
-    // 比如：如果 Session 说“我结束了”，Server 就把它从列表里删掉
-    connect(session, &ClientSession::sessionClosed, this, [=](ClientSession* s) {
-        m_sessions.removeOne(s);
-        s->deleteLater(); // 销毁对象
-        qDebug() << "会话已销毁，当前在线人数：" << m_sessions.size();
+        connect(session, &ClientSession::sessionClosed, this, [this](ClientSession* s) {
+            const QString ip = s->peerAddress();
+            const quint16 port = s->peerPort();
+            m_sessions.removeOne(s);
+            emit clientDisconnected(ip, port);
+            emit logMessage(QStringLiteral("客户端断开: %1:%2，当前在线: %3")
+                .arg(ip)
+                .arg(port)
+                .arg(m_sessions.size()));
+            s->deleteLater();
         });
 
-    // 5. 通知界面
-    emit clientConnected(ip, socket->peerPort());
-
+        emit clientConnected(session->peerAddress(), session->peerPort());
+        emit logMessage(QStringLiteral("客户端连接: %1:%2，当前在线: %3")
+            .arg(session->peerAddress())
+            .arg(session->peerPort())
+            .arg(m_sessions.size()));
+    }
 }

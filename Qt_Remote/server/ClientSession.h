@@ -1,30 +1,30 @@
 #pragma once
+
 #include <QObject>
 #include <QTcpSocket>
 #include "NetworkData.h"
+#include "PacketStreamParser.h"
+
 class ClientSession : public QObject
 {
     Q_OBJECT
 public:
-    // 构造函数接收那个刚连上的 socket
     explicit ClientSession(QTcpSocket* socket, QObject* parent = nullptr);
     qint64 sendRaw(const QByteArray& packet);
+
+    QString peerAddress() const;
+    quint16 peerPort() const;
+
 signals:
-    // 发包给业务层处理相应的命令
-    void ReceiveCommand(CmdType cmdType, QByteArray data);
-
-    // 掉线了，通知 Server 把我从列表里删掉
+    void commandReceived(CmdType cmdType, const QByteArray& data);
     void sessionClosed(ClientSession* client);
+    void logMessage(const QString& msg);
 
-public slots:
-    // 发送数据的接口（比如把屏幕截图发给对方）
-    void sendScreenData(const QByteArray& imgData);
-
-private slots:  
-    void onReadyRead();    // 处理收到的数据
-    void onDisconnected(); // 处理断开
+private slots:
+    void onReadyRead();
+    void onDisconnected();
 
 private:
-    QTcpSocket* m_socket;  // 持有 socket 指针
-	QByteArray m_buffer;   // 处理粘包的缓冲区
+    QTcpSocket* m_socket = nullptr;
+    PacketStreamParser m_streamParser;
 };
