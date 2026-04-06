@@ -1,6 +1,7 @@
 add_library(common STATIC
     NetworkData.h
-   
+    PacketStreamParser.h
+    PacketStreamParser.cpp
 )
 
 target_include_directories(common PUBLIC

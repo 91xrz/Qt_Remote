@@ -3,12 +3,13 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 add_executable(server
+    main.cpp
+    ServerWindow.h
+    ServerWindow.cpp
     ClientSession.h
     ClientSession.cpp
-    DeviceServer.cpp
     DeviceServer.h
-    LockScreenWidget.cpp
-  
+    DeviceServer.cpp
 )
 
 target_include_directories(server PRIVATE
