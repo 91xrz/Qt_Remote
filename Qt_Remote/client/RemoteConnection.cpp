@@ -55,6 +55,10 @@ void RemoteConnection::onReadyRead()
 {
     // 复用 common 里的粘包解析器
     const auto parsed = m_streamParser.appendAndParse(m_socket->readAll());
+
+    
+    emit logMessage("收到");
+    //TODO:需要在界面写相应的处理
     for (const auto& result : parsed) {
         if (result.valid) {
             // 解析成功，抛给外层 UI 业务去处理

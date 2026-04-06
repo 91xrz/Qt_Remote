@@ -4,7 +4,7 @@
 #include "ClientSession.h"
 
 DeviceServer::DeviceServer(QObject* parent)
-    : QObject(parent), m_server(new QTcpServer(this))
+    : QObject(parent), m_server(new QTcpServer(this)),m_cmdHandler(new CommandHandler(this))
 {
     connect(m_server, &QTcpServer::newConnection, this, &DeviceServer::onNewConnection);
 }
@@ -66,13 +66,13 @@ void DeviceServer::onNewConnection()
         m_sessions.append(session);
 
         connect(session, &ClientSession::logMessage, this, &DeviceServer::logMessage);
-        connect(session, &ClientSession::commandReceived, this,
-            [this, session](CmdType type, const QByteArray&) {
-                emit logMessage(QStringLiteral("收到命令: %1 (来自 %2:%3)")
-                    .arg(static_cast<int>(type))
-                    .arg(session->peerAddress())
-                    .arg(session->peerPort()));
-            });
+
+        //业务分发
+        connect(session, &ClientSession::commandReceived,
+            m_cmdHandler, &CommandHandler::onHandlerCommand);
+        connect(m_cmdHandler, &CommandHandler::sendPacket,
+            session, &ClientSession::sendRaw);
+
 
         connect(session, &ClientSession::sessionClosed, this, [this](ClientSession* s) {
             const QString ip = s->peerAddress();

@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QTcpServer>
 #include <QList>
+#include "CommandHandler.h"
 
 class ClientSession;
 
@@ -30,4 +31,5 @@ private slots:
 private:
     QTcpServer* m_server = nullptr;
     QList<ClientSession*> m_sessions;
+    CommandHandler* m_cmdHandler;
 };
