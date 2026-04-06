@@ -33,10 +33,38 @@ Qt_Remote::Qt_Remote(QWidget *parent)
 {
     ui.setupUi(this);
 
-    /*
-    m_logic = new DeviceServer(this);
     ui.labelLocalIpValue->setText(getLocalIpv4Address());
     ui.btnStopService->setEnabled(false);
+    // 1. 初始化网络模块
+    m_connection = new RemoteConnection(this);
+
+    // 2. 绑定网络日志到 UI 
+    connect(m_connection, &RemoteConnection::logMessage, this, [=](const QString& msg) {
+        ui.plainTextLogs->appendPlainText(msg);
+        });
+  
+    //清空日志
+    connect(ui.btnClearLogs, &QPushButton::clicked, this, [=]() {
+        ui.plainTextLogs->clear();
+        });
+
+    //文件管理窗口
+    connect(ui.btnFileManager, &QPushButton::clicked, this, [this]() {
+        if (!m_fileManagerWidget) {
+            m_fileManagerWidget = new FileManagerWidget(this);
+            m_fileManagerWidget->setWindowFlags(Qt::Window);
+            m_fileManagerWidget->setWindowTitle(QStringLiteral("远程文件管理器"));
+            m_fileManagerWidget->resize(900, 560);
+        }
+
+        // 显示、置顶、激活
+        m_fileManagerWidget->show();
+        m_fileManagerWidget->raise();
+        m_fileManagerWidget->activateWindow();
+        });
+    /*
+    m_logic = new DeviceServer(this);
+ 
 
     connect(m_logic, &DeviceServer::logMessage, this, [=](const QString& msg) {
         ui.statusBar->showMessage(msg);
@@ -47,16 +75,6 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         ui.plainTextLogs->appendPlainText(QString("客户端连接: %1:%2").arg(ip).arg(port));
     });
 
-    connect(ui.btnStartService, &QPushButton::clicked, this, [=]() {
-        const int port = ui.lineEditPort->text().toInt();
-        const int actualPort = port > 0 ? port : 8888;
-        if (m_logic->startListen(actualPort)) {
-            ui.labelServiceStatusValue->setText("运行中");
-            ui.btnStartService->setEnabled(false);
-            ui.btnStopService->setEnabled(true);
-            ui.lineEditPort->setEnabled(false);
-        }
-    });
 
     connect(ui.btnStopService, &QPushButton::clicked, this, [=]() {
         m_logic->stopListen();
@@ -70,26 +88,7 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         m_logic->testFunction();
         });
 
-    connect(ui.btnFileManager, &QPushButton::clicked, this, [this]() {
-        if (!m_fileManagerWidget) {
-            m_fileManagerWidget = new FileManagerWidget(this);
-
-            // 【关键修复】强制将这个附带 parent 的 Widget 设为独立窗口
-            m_fileManagerWidget->setWindowFlags(Qt::Window);
-            m_fileManagerWidget->setWindowTitle(QStringLiteral("远程文件管理器"));
-            m_fileManagerWidget->resize(900, 560);
-        }
-
-        // 显示、置顶、激活
-        m_fileManagerWidget->show();
-        m_fileManagerWidget->raise();
-        m_fileManagerWidget->activateWindow();
-        });
-
-
-    connect(ui.btnClearLogs, &QPushButton::clicked, this, [=]() {
-        ui.plainTextLogs->clear();
-    });
+   
     */
 }
 

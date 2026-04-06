@@ -2,7 +2,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-add_executable(client
+add_executable(client WIN32
      main.cpp
     Qt_Remote.cpp
     Qt_Remote.h
@@ -10,6 +10,8 @@ add_executable(client
     Qt_Remote.qrc
     FileManagerWidget.h
     FileManagerWidget.cpp
+    RemoteConnection.h
+    RemoteConnection.cpp
 )
 
 target_include_directories(client PRIVATE

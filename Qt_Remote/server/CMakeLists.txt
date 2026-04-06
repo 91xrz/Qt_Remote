@@ -6,8 +6,12 @@ add_executable(server
     main.cpp
     ServerWindow.h
     ServerWindow.cpp
+    LockScreenWidget.h
+    LockScreenWidget.cpp
     ClientSession.h
     ClientSession.cpp
+    CommandHandler.h
+    CommandHandler.cpp
     DeviceServer.h
     DeviceServer.cpp
 )
