@@ -13,6 +13,11 @@ RemoteConnection::RemoteConnection(QObject* parent)
 void RemoteConnection::connectToServer(const QString& ip, quint16 port)
 {
     if (m_socket->state() == QAbstractSocket::ConnectedState) {
+        emit logMessage(QStringLiteral("已处于连接状态，无需重复连接"));
+        return;
+    }
+    if (m_socket->state() == QAbstractSocket::ConnectingState) {
+        emit logMessage(QStringLiteral("正在连接中，请稍候..."));
         return;
     }
     emit logMessage(QString("正在连接到 %1:%2 ...").arg(ip).arg(port));
@@ -22,8 +27,11 @@ void RemoteConnection::connectToServer(const QString& ip, quint16 port)
 void RemoteConnection::disconnectFromServer()
 {
     if (m_socket->state() == QAbstractSocket::ConnectedState) {
+        emit logMessage(QStringLiteral("正在断开连接..."));
         m_socket->disconnectFromHost();
+        return;
     }
+    emit logMessage(QStringLiteral("当前未连接，无需断开"));
 }
 
 bool RemoteConnection::isConnected() const
@@ -60,5 +68,6 @@ void RemoteConnection::onReadyRead()
 
 void RemoteConnection::onSocketError(QAbstractSocket::SocketError /*socketError*/)
 {
+    emit logMessage(QStringLiteral("Socket错误：%1").arg(m_socket->errorString()));
     emit errorOccurred(m_socket->errorString());
 }

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>被控端服务</string>
+   <string>远程控制客户端</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <layout class="QVBoxLayout" name="verticalLayoutMain">
@@ -24,21 +24,27 @@
        <item row="0" column="0">
         <widget class="QLabel" name="labelLocalIpTitle">
          <property name="text">
-          <string>本机 IP：</string>
+          <string>目标 IP：</string>
          </property>
         </widget>
        </item>
        <item row="0" column="1">
-        <widget class="QLabel" name="labelLocalIpValue">
+        <widget class="QLineEdit" name="lineEditTargetIp">
+         <property name="maximumSize">
+          <size>
+           <width>220</width>
+           <height>16777215</height>
+          </size>
+         </property>
          <property name="text">
-          <string>--</string>
+          <string>127.0.0.1</string>
          </property>
         </widget>
        </item>
        <item row="1" column="0">
         <widget class="QLabel" name="labelPortTitle">
          <property name="text">
-          <string>监听端口：</string>
+          <string>目标端口：</string>
          </property>
         </widget>
        </item>
@@ -75,7 +81,7 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayoutActions">
       <item>
-       <widget class="QPushButton" name="btnStartService">
+        <widget class="QPushButton" name="btnStartService">
         <property name="minimumSize">
          <size>
           <width>100</width>
@@ -83,12 +89,12 @@
          </size>
         </property>
         <property name="text">
-         <string>启动服务</string>
+         <string>连接</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnStopService">
+        <widget class="QPushButton" name="btnStopService">
         <property name="minimumSize">
          <size>
           <width>100</width>
@@ -96,7 +102,7 @@
          </size>
         </property>
         <property name="text">
-         <string>停止服务</string>
+         <string>断开</string>
         </property>
        </widget>
       </item>

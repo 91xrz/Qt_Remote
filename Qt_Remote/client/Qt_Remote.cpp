@@ -1,31 +1,7 @@
 #include "Qt_Remote.h"
 //#include "ClientSession.h"
 #include "FileManagerWidget.h"
-#include <QNetworkInterface>
-
-namespace {
-QString getLocalIpv4Address()
-{
-    const auto interfaces = QNetworkInterface::allInterfaces();
-    for (const QNetworkInterface& iface : interfaces) {
-        if (!(iface.flags() & QNetworkInterface::IsUp) ||
-            !(iface.flags() & QNetworkInterface::IsRunning) ||
-            (iface.flags() & QNetworkInterface::IsLoopBack)) {
-            continue;
-        }
-
-        const auto entries = iface.addressEntries();
-        for (const QNetworkAddressEntry& entry : entries) {
-            const QHostAddress address = entry.ip();
-            if (address.protocol() == QAbstractSocket::IPv4Protocol) {
-                return address.toString();
-            }
-        }
-    }
-
-    return QStringLiteral("127.0.0.1");
-}
-}
+#include <QHostAddress>
 
 Qt_Remote::Qt_Remote(QWidget *parent)
     : QMainWindow(parent)
@@ -33,7 +9,7 @@ Qt_Remote::Qt_Remote(QWidget *parent)
 {
     ui.setupUi(this);
 
-    ui.labelLocalIpValue->setText(getLocalIpv4Address());
+    ui.labelServiceStatusValue->setText(QStringLiteral("未连接"));
     ui.btnStopService->setEnabled(false);
     // 1. 初始化网络模块
     m_connection = new RemoteConnection(this);
@@ -41,6 +17,63 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     // 2. 绑定网络日志到 UI 
     connect(m_connection, &RemoteConnection::logMessage, this, [=](const QString& msg) {
         ui.plainTextLogs->appendPlainText(msg);
+        });
+
+    connect(m_connection, &RemoteConnection::connected, this, [=]() {
+        ui.labelServiceStatusValue->setText(QStringLiteral("已连接"));
+        ui.btnStartService->setEnabled(false);
+        ui.btnStopService->setEnabled(true);
+        ui.lineEditTargetIp->setEnabled(false);
+        ui.lineEditPort->setEnabled(false);
+        ui.plainTextLogs->appendPlainText(QStringLiteral("已连接到目标主机"));
+        });
+
+    connect(m_connection, &RemoteConnection::disconnected, this, [=]() {
+        ui.labelServiceStatusValue->setText(QStringLiteral("未连接"));
+        ui.btnStartService->setEnabled(true);
+        ui.btnStopService->setEnabled(false);
+        ui.lineEditTargetIp->setEnabled(true);
+        ui.lineEditPort->setEnabled(true);
+        ui.plainTextLogs->appendPlainText(QStringLiteral("已断开连接"));
+        });
+
+    connect(m_connection, &RemoteConnection::errorOccurred, this, [=](const QString& msg) {
+        ui.plainTextLogs->appendPlainText(QStringLiteral("【网络错误】%1").arg(msg));
+        ui.labelServiceStatusValue->setText(QStringLiteral("连接异常"));
+        ui.btnStartService->setEnabled(true);
+        ui.btnStopService->setEnabled(false);
+        ui.lineEditTargetIp->setEnabled(true);
+        ui.lineEditPort->setEnabled(true);
+        });
+
+    connect(ui.btnStartService, &QPushButton::clicked, this, [=]() {
+        const QString ip = ui.lineEditTargetIp->text().trimmed();
+        bool ok = false;
+        const quint16 port = ui.lineEditPort->text().trimmed().toUShort(&ok);
+
+        if (ip.isEmpty()) {
+            ui.plainTextLogs->appendPlainText(QStringLiteral("【输入错误】目标IP不能为空"));
+            return;
+        }
+
+        if (QHostAddress(ip).isNull()) {
+            ui.plainTextLogs->appendPlainText(QStringLiteral("【输入错误】目标IP格式不正确：%1").arg(ip));
+            return;
+        }
+
+        if (!ok || port == 0) {
+            ui.plainTextLogs->appendPlainText(QStringLiteral("【输入错误】目标端口无效：%1").arg(ui.lineEditPort->text()));
+            return;
+        }
+
+        ui.labelServiceStatusValue->setText(QStringLiteral("连接中..."));
+        ui.plainTextLogs->appendPlainText(QStringLiteral("准备连接到 %1:%2").arg(ip).arg(port));
+        m_connection->connectToServer(ip, port);
+        });
+
+    connect(ui.btnStopService, &QPushButton::clicked, this, [=]() {
+        ui.plainTextLogs->appendPlainText(QStringLiteral("请求断开连接"));
+        m_connection->disconnectFromServer();
         });
   
     //清空日志
@@ -62,34 +95,15 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         m_fileManagerWidget->raise();
         m_fileManagerWidget->activateWindow();
         });
-    /*
-    m_logic = new DeviceServer(this);
- 
-
-    connect(m_logic, &DeviceServer::logMessage, this, [=](const QString& msg) {
-        ui.statusBar->showMessage(msg);
-        ui.plainTextLogs->appendPlainText(msg);
-    });
-
-    connect(m_logic, &DeviceServer::clientConnected, this, [=](const QString& ip, int port) {
-        ui.plainTextLogs->appendPlainText(QString("客户端连接: %1:%2").arg(ip).arg(port));
-    });
-
-
-    connect(ui.btnStopService, &QPushButton::clicked, this, [=]() {
-        m_logic->stopListen();
-        ui.labelServiceStatusValue->setText("未启动");
-        ui.btnStartService->setEnabled(true);
-        ui.btnStopService->setEnabled(false);
-        ui.lineEditPort->setEnabled(true);
-    });
 
     connect(ui.btnTest, &QPushButton::clicked, this, [=]() {
-        m_logic->testFunction();
+        if (!m_connection->isConnected()) {
+            ui.plainTextLogs->appendPlainText(QStringLiteral("【功能测试】当前未连接，无法发送测试指令"));
+            return;
+        }
+        ui.plainTextLogs->appendPlainText(QStringLiteral("【功能测试】准备发送测试指令（DriverInfo）"));
+        m_connection->sendPacket(CmdType::DriverInfo);
         });
-
-   
-    */
 }
 
 Qt_Remote::~Qt_Remote()
