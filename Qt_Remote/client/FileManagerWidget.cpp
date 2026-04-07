@@ -20,7 +20,19 @@
 namespace {
 constexpr auto kDummyText = "Loading...";
 }
+static QString formatSize(qint64 bytes)
+{
+    double size = bytes;
+    QStringList units = { "B", "KB", "MB", "GB", "TB" };
 
+    int i = 0;
+    while (size >= 1024 && i < units.size() - 1) {
+        size /= 1024;
+        ++i;
+    }
+
+    return QString::number(size, 'f', 2) + " " + units[i];
+}
 FileManagerWidget::FileManagerWidget(QWidget* parent)
     : QWidget(parent)
     , m_splitter(nullptr)
@@ -213,7 +225,7 @@ void FileManagerWidget::onDirInfoReceived(const FILEINFO& fileInfo)
     auto* nameItem = new QStandardItem(icon, name);
     nameItem->setData(fullPath, Qt::UserRole + 1);
     row << nameItem;
-    row << new QStandardItem(isDir ? QStringLiteral("--") : QString::number(fileInfo.nFileSize));
+    row << new QStandardItem( isDir ? QStringLiteral("--") : formatSize(fileInfo.nFileSize) );
     row << new QStandardItem(isDir ? QStringLiteral("文件夹") : QStringLiteral("文件"));
     const QString lastModified = fileInfo.nLastModified > 0
         ? QDateTime::fromSecsSinceEpoch(fileInfo.nLastModified).toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"))
@@ -235,7 +247,6 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
     QAction* openAction = menu.addAction(QStringLiteral("打开"));
     QAction* downloadAction = menu.addAction(QStringLiteral("下载"));
     QAction* deleteAction = menu.addAction(QStringLiteral("删除"));
-    QAction* runAction = menu.addAction(QStringLiteral("运行"));
 
     QAction* selectedAction = menu.exec(m_tableView->viewport()->mapToGlobal(pos));
     if (!selectedAction) {
@@ -251,7 +262,5 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
     else if (selectedAction == deleteAction) {
         qDebug() << "[文件管理] 删除:" << fileName;
     }
-    else if (selectedAction == runAction) {
-        qDebug() << "[文件管理] 运行:" << fileName;
-    }
+  
 }

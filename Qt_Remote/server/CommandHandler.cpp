@@ -18,6 +18,9 @@ void  CommandHandler::onHandlerCommand(CmdType type, QByteArray body)
     case CmdType::RunFile:
         RunFile(body);
         break;
+    case CmdType::DeleFile:
+        DeleFile(body);
+		break;
     case CmdType::MouseInput:
         HandleMouseEvent(body);
         break;

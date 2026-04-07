@@ -10,12 +10,10 @@ void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& bod
         // 服务端发来的是 "C,D,E," 这样的字符串
         QString driveStr = QString::fromLocal8Bit(body);
         QStringList drives = driveStr.split(',', Qt::SkipEmptyParts);
-        emit sigLogMessage(QString("获取到远端磁盘列表：%1").arg(drives.join(" ")));
         emit sigDriverInfoReceived(drives);
         break;
     }
     case CmdType::DirInfo: {
-        // 服务端发来的是 FILEINFO 结构体
         if (body.size() == sizeof(FILEINFO)) {
             FILEINFO info;
             memcpy(&info, body.constData(), sizeof(FILEINFO));
