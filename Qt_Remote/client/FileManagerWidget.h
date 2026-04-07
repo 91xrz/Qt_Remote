@@ -1,6 +1,8 @@
 #pragma once
 
 #include <QWidget>
+#include <QStringList>
+#include "NetworkData.h"
 
 class QSplitter;
 class QTreeView;
@@ -9,6 +11,7 @@ class QStandardItem;
 class QStandardItemModel;
 class QModelIndex;
 class QPoint;
+class RemoteConnection;
 
 class FileManagerWidget : public QWidget
 {
@@ -16,12 +19,17 @@ class FileManagerWidget : public QWidget
 
 public:
     explicit FileManagerWidget(QWidget* parent = nullptr);
+    void setConnection(RemoteConnection* conn);
+
+public slots:
+    void onDriverInfoReceived(const QStringList& drives);
+    void onDirInfoReceived(const FILEINFO& fileInfo);
 
 private:
     void setupUi();
     void setupModels();
     void setupConnections();
-    void loadTestDrives();
+    void requestTestDrives();
     void addDummyNode(QStandardItem* parentItem);
     bool hasDummyChild(QStandardItem* parentItem) const;
     void populateChildrenForItem(QStandardItem* parentItem);
@@ -34,4 +42,8 @@ private:
     QTableView* m_tableView;
     QStandardItemModel* m_treeModel;
     QStandardItemModel* m_tableModel;
+    RemoteConnection* m_connection = nullptr;
+    bool m_isRequestingTree = false;
+    QStandardItem* m_expandingItem = nullptr;
+    QString m_currentRequestPath;
 };

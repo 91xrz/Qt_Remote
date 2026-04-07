@@ -1,8 +1,9 @@
 #include "FileManagerWidget.h"
+#include "RemoteConnection.h"
+#include "NetworkData.h"
 
 #include <QAction>
 #include <QApplication>
-#include <QDateTime>
 #include <QDebug>
 #include <QHeaderView>
 #include <QStyle>
@@ -15,9 +16,6 @@
 #include <QTableView>
 #include <QTreeView>
 #include <QVBoxLayout>
-#include <QDir>
-#include <QFileInfo>
-#include <QFileInfoList>
 namespace {
 constexpr auto kDummyText = "Loading...";
 }
@@ -33,7 +31,11 @@ FileManagerWidget::FileManagerWidget(QWidget* parent)
     setupUi();
     setupModels();
     setupConnections();
-    loadTestDrives();
+}
+
+void FileManagerWidget::setConnection(RemoteConnection* conn)
+{
+    m_connection = conn;
 }
 
 void FileManagerWidget::setupUi()
@@ -90,28 +92,13 @@ void FileManagerWidget::setupConnections()
     connect(m_tableView, &QWidget::customContextMenuRequested, this, &FileManagerWidget::showFileContextMenu);
 }
 
-void FileManagerWidget::loadTestDrives()
+void FileManagerWidget::requestTestDrives()
 {
-    const QIcon driveIcon = QApplication::style()->standardIcon(QStyle::SP_DriveHDIcon);
-
-    // 获取本机所有盘符
-    QFileInfoList drives = QDir::drives();
-    for (const QFileInfo& driveInfo : drives) {
-        QString drivePath = driveInfo.absoluteFilePath(); // 例如 "C:/"
-        auto* driveItem = new QStandardItem(driveIcon, drivePath);
-
-        // 【关键绑定】把真实路径隐藏存储在节点里，供后续使用
-        driveItem->setData(drivePath, Qt::UserRole + 1);
-
-        addDummyNode(driveItem);
-        m_treeModel->appendRow(driveItem);
+    if (!m_connection) {
+        qDebug() << "[文件管理] 连接尚未注入，无法请求磁盘信息";
+        return;
     }
-
-    if (m_treeModel->rowCount() > 0) {
-        const QModelIndex firstIndex = m_treeModel->index(0, 0);
-        m_treeView->setCurrentIndex(firstIndex);
-        showFilesForIndex(firstIndex);
-    }
+    m_connection->sendPacket(CmdType::DriverInfo);
 }
 
 void FileManagerWidget::addDummyNode(QStandardItem* parentItem)
@@ -134,60 +121,101 @@ bool FileManagerWidget::hasDummyChild(QStandardItem* parentItem) const
 
 void FileManagerWidget::populateChildrenForItem(QStandardItem* parentItem)
 {
-    if (!parentItem) return;
-
-    // 取出此节点代表的真实路径
-    QString path = parentItem->data(Qt::UserRole + 1).toString();
-    QDir dir(path);
-
-    // 左侧目录树只显示文件夹，不显示文件。过滤掉 . 和 ..
-    QFileInfoList dirList = dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    const QIcon dirIcon = QApplication::style()->standardIcon(QStyle::SP_DirIcon);
-
-    for (const QFileInfo& dirInfo : dirList) {
-        auto* folderItem = new QStandardItem(dirIcon, dirInfo.fileName());
-        folderItem->setData(dirInfo.absoluteFilePath(), Qt::UserRole + 1);
-
-        // 只要是文件夹，就给它加个 Loading 占位符，实现懒加载
-        addDummyNode(folderItem);
-        parentItem->appendRow(folderItem);
+    if (!parentItem) {
+        return;
     }
+    if (!m_connection) {
+        qDebug() << "[文件管理] 连接尚未注入，无法展开目录";
+        return;
+    }
+
+    m_isRequestingTree = true;
+    m_expandingItem = parentItem;
+    m_currentRequestPath = parentItem->data(Qt::UserRole + 1).toString();
+    m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
 }
 
 void FileManagerWidget::showFilesForIndex(const QModelIndex& index)
 {
     m_tableModel->removeRows(0, m_tableModel->rowCount());
-    if (!index.isValid()) return;
+    if (!index.isValid()) {
+        return;
+    }
+    if (!m_connection) {
+        qDebug() << "[文件管理] 连接尚未注入，无法读取目录详情";
+        return;
+    }
 
     QStandardItem* item = m_treeModel->itemFromIndex(index);
-    QString path = item->data(Qt::UserRole + 1).toString();
-    QDir dir(path);
-
-    // 右侧表格既要显示文件夹，也要显示文件，文件夹排在前面
-    QFileInfoList fileList = dir.entryInfoList(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot, QDir::DirsFirst | QDir::Name);
-
-    for (const QFileInfo& fileInfo : fileList) {
-        QList<QStandardItem*> row;
-        const bool isDir = fileInfo.isDir();
-        const QIcon icon = QApplication::style()->standardIcon(isDir ? QStyle::SP_DirIcon : QStyle::SP_FileIcon);
-
-        // 第一列：文件名
-        auto* nameItem = new QStandardItem(icon, fileInfo.fileName());
-        nameItem->setData(fileInfo.absoluteFilePath(), Qt::UserRole + 1); // 也绑上路径，方便以后右键操作
-        row << nameItem;
-
-        // 第二列：大小
-        QString sizeStr = isDir ? "--" : QString::number(fileInfo.size() / 1024) + " KB";
-        row << new QStandardItem(sizeStr);
-
-        // 第三列：类型
-        row << new QStandardItem(isDir ? QStringLiteral("文件夹") : fileInfo.suffix() + QStringLiteral(" 文件"));
-
-        // 第四列：修改时间
-        row << new QStandardItem(fileInfo.lastModified().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")));
-
-        m_tableModel->appendRow(row);
+    if (!item) {
+        return;
     }
+
+    m_isRequestingTree = false;
+    m_currentRequestPath = item->data(Qt::UserRole + 1).toString();
+    m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
+}
+
+void FileManagerWidget::onDriverInfoReceived(const QStringList& drives)
+{
+    m_treeModel->removeRows(0, m_treeModel->rowCount());
+    const QIcon driveIcon = QApplication::style()->standardIcon(QStyle::SP_DriveHDIcon);
+
+    for (const QString& driveName : drives) {
+        QString drivePath = driveName.trimmed();
+        if (drivePath.isEmpty()) {
+            continue;
+        }
+        if (!drivePath.endsWith(':')) {
+            drivePath.append(':');
+        }
+        drivePath.append('\\');
+
+        auto* driveItem = new QStandardItem(driveIcon, drivePath);
+        driveItem->setData(drivePath, Qt::UserRole + 1);
+        addDummyNode(driveItem);
+        m_treeModel->appendRow(driveItem);
+    }
+}
+
+void FileManagerWidget::onDirInfoReceived(const FILEINFO& fileInfo)
+{
+    if (!fileInfo.HasNext) {
+        m_expandingItem = nullptr;
+        return;
+    }
+
+    const QString basePath = m_currentRequestPath;
+    const QString name = QString::fromLocal8Bit(fileInfo.szFileName);
+    QString fullPath = basePath;
+    if (!fullPath.endsWith('\\') && !fullPath.endsWith('/')) {
+        fullPath.append('\\');
+    }
+    fullPath.append(name);
+
+    if (m_isRequestingTree) {
+        if (!m_expandingItem || !fileInfo.bIsDir) {
+            return;
+        }
+        const QIcon dirIcon = QApplication::style()->standardIcon(QStyle::SP_DirIcon);
+        auto* folderItem = new QStandardItem(dirIcon, name);
+        folderItem->setData(fullPath, Qt::UserRole + 1);
+        addDummyNode(folderItem);
+        m_expandingItem->appendRow(folderItem);
+        return;
+    }
+
+    QList<QStandardItem*> row;
+    const bool isDir = fileInfo.bIsDir;
+    const QIcon icon = QApplication::style()->standardIcon(isDir ? QStyle::SP_DirIcon : QStyle::SP_FileIcon);
+
+    auto* nameItem = new QStandardItem(icon, name);
+    nameItem->setData(fullPath, Qt::UserRole + 1);
+    row << nameItem;
+    row << new QStandardItem(QStringLiteral("--"));
+    row << new QStandardItem(isDir ? QStringLiteral("文件夹") : QStringLiteral("文件"));
+    row << new QStandardItem(QStringLiteral("--"));
+    m_tableModel->appendRow(row);
 }
 
 void FileManagerWidget::showFileContextMenu(const QPoint& pos)
