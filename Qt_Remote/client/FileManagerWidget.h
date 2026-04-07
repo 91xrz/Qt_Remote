@@ -24,6 +24,8 @@ public:
 public slots:
     void onDriverInfoReceived(const QStringList& drives);
     void onDirInfoReceived(const FILEINFO& fileInfo);
+    void onOpenFileFinished();
+    void onDeleteFileFinished();
 
 private:
     void setupUi();

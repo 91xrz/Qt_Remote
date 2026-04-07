@@ -105,6 +105,10 @@ Qt_Remote::Qt_Remote(QWidget *parent)
                 m_fileManagerWidget, &FileManagerWidget::onDriverInfoReceived);
             connect(m_commandHandler, &ClientCommandHandler::sigDirInfoReceived,
                 m_fileManagerWidget, &FileManagerWidget::onDirInfoReceived);
+            connect(m_commandHandler, &ClientCommandHandler::sigOpenFileFinished,
+                m_fileManagerWidget, &FileManagerWidget::onOpenFileFinished);
+            connect(m_commandHandler, &ClientCommandHandler::sigDeleteFileFinished,
+                m_fileManagerWidget, &FileManagerWidget::onDeleteFileFinished);
         }
 
         // 显示、置顶、激活
