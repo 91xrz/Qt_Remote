@@ -29,7 +29,16 @@ void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& bod
         }
         break;
     }
-                            // ... 处理其他类型如 RunFile, DeleFile 的回执
+    case CmdType::RunFile: {
+        emit sigLogMessage(QStringLiteral("[文件管理] 远端文件打开成功"));
+        emit sigOpenFileFinished();
+        break;
+    }
+    case CmdType::DeleFile: {
+        emit sigLogMessage(QStringLiteral("[文件管理] 远端文件删除成功"));
+        emit sigDeleteFileFinished();
+        break;
+    }
     default:
         break;
     }

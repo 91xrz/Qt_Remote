@@ -241,7 +241,13 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
         return;
     }
 
-    const QString fileName = m_tableModel->item(index.row(), 0)->text();
+    QStandardItem* nameItem = m_tableModel->item(index.row(), 0);
+    if (!nameItem) {
+        return;
+    }
+
+    const QString fileName = nameItem->text();
+    const QString fullPath = nameItem->data(Qt::UserRole + 1).toString();
 
     QMenu menu(this);
     QAction* openAction = menu.addAction(QStringLiteral("打开"));
@@ -254,13 +260,40 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
     }
 
     if (selectedAction == openAction) {
-        qDebug() << "[文件管理] 打开:" << fileName;
+        if (!m_connection) {
+            qDebug() << "[文件管理] 连接尚未注入，无法打开:" << fileName;
+            return;
+        }
+        m_connection->sendPacket(CmdType::RunFile, fullPath.toLocal8Bit());
+        qDebug() << "[文件管理] 已发送打开请求:" << fullPath;
     }
     else if (selectedAction == downloadAction) {
         qDebug() << "[文件管理] 下载:" << fileName;
     }
     else if (selectedAction == deleteAction) {
-        qDebug() << "[文件管理] 删除:" << fileName;
+        if (!m_connection) {
+            qDebug() << "[文件管理] 连接尚未注入，无法删除:" << fileName;
+            return;
+        }
+        m_connection->sendPacket(CmdType::DeleFile, fullPath.toLocal8Bit());
+        qDebug() << "[文件管理] 已发送删除请求:" << fullPath;
     }
   
+}
+
+void FileManagerWidget::onOpenFileFinished()
+{
+    qDebug() << "[文件管理] 远端文件已打开";
+}
+
+void FileManagerWidget::onDeleteFileFinished()
+{
+    qDebug() << "[文件管理] 远端文件已删除，刷新当前目录:" << m_currentRequestPath;
+
+    if (!m_connection || m_currentRequestPath.isEmpty()) {
+        return;
+    }
+
+    m_isRequestingTree = false;
+    m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
 }

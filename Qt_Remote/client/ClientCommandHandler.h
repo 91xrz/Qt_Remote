@@ -24,4 +24,10 @@ signals:
 
     // 屏幕截图数据接收信号
     void sigScreenDataReceived(const QPixmap& pixmap);
+
+    // 打开文件回执
+    void sigOpenFileFinished();
+
+    // 删除文件回执
+    void sigDeleteFileFinished();
 };
