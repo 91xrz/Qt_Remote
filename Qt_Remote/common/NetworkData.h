@@ -52,12 +52,16 @@ typedef struct fileinfo // 文件信息
         bIsDir = false;
         bIsInvild = false;
         HasNext = true;
+        nFileSize = 0;
+        nLastModified = 0;
     }
 
     char szFileName[260]; // 文件名 (支持中文需用 Local8Bit)
     bool bIsDir;          // 是否是文件夹 (改成小写 bool)
     bool bIsInvild;       // 是否是无效文件
     bool HasNext;         // 是否有下一个文件
+    qint64 nFileSize;     // 文件大小(字节)
+    qint64 nLastModified; // 最后修改时间(Unix 时间戳，秒)
 
 } FILEINFO, * PFILEINFO;
 

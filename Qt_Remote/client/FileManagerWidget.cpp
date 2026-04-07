@@ -4,6 +4,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QDateTime>
 #include <QDebug>
 #include <QHeaderView>
 #include <QStyle>
@@ -212,9 +213,12 @@ void FileManagerWidget::onDirInfoReceived(const FILEINFO& fileInfo)
     auto* nameItem = new QStandardItem(icon, name);
     nameItem->setData(fullPath, Qt::UserRole + 1);
     row << nameItem;
-    row << new QStandardItem(QStringLiteral("--"));
+    row << new QStandardItem(isDir ? QStringLiteral("--") : QString::number(fileInfo.nFileSize));
     row << new QStandardItem(isDir ? QStringLiteral("文件夹") : QStringLiteral("文件"));
-    row << new QStandardItem(QStringLiteral("--"));
+    const QString lastModified = fileInfo.nLastModified > 0
+        ? QDateTime::fromSecsSinceEpoch(fileInfo.nLastModified).toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"))
+        : QStringLiteral("--");
+    row << new QStandardItem(lastModified);
     m_tableModel->appendRow(row);
 }
 

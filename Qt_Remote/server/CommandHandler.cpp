@@ -1,5 +1,6 @@
 #include "CommandHandler.h"
 #include <windows.h>
+#include <QDateTime>
 
 
 void  CommandHandler::onHandlerCommand(CmdType type, QByteArray body)
@@ -82,6 +83,8 @@ void CommandHandler::MakeDirInfo(const QByteArray& body)
         info.bIsDir = file.isDir();
         info.bIsInvild = FALSE;
         info.HasNext = TRUE;
+        info.nFileSize = file.isDir() ? 0 : file.size();
+        info.nLastModified = file.lastModified().toSecsSinceEpoch();
 
         // 安全拷贝文件名 (处理中文路径，限制最大长度为 260)
         QByteArray fileName = file.fileName().toLocal8Bit();
