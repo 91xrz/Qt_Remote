@@ -5,7 +5,6 @@
 
 Qt_Remote::Qt_Remote(QWidget *parent)
     : QMainWindow(parent)
-    , m_fileManagerWidget(nullptr)
 {
     ui.setupUi(this);
 
@@ -100,12 +99,20 @@ Qt_Remote::Qt_Remote(QWidget *parent)
             m_fileManagerWidget->setWindowFlags(Qt::Window);
             m_fileManagerWidget->setWindowTitle(QStringLiteral("远程文件管理器"));
             m_fileManagerWidget->resize(900, 560);
+
+            m_fileManagerWidget->setConnection(m_connection);
+            connect(m_commandHandler, &ClientCommandHandler::sigDriverInfoReceived,
+                m_fileManagerWidget, &FileManagerWidget::onDriverInfoReceived);
+            connect(m_commandHandler, &ClientCommandHandler::sigDirInfoReceived,
+                m_fileManagerWidget, &FileManagerWidget::onDirInfoReceived);
         }
 
         // 显示、置顶、激活
         m_fileManagerWidget->show();
         m_fileManagerWidget->raise();
         m_fileManagerWidget->activateWindow();
+
+        m_connection->sendPacket(CmdType::DriverInfo);
         });
 
     connect(ui.btnTest, &QPushButton::clicked, this, [=]() {
