@@ -57,7 +57,6 @@ void RemoteConnection::onReadyRead()
     const auto parsed = m_streamParser.appendAndParse(m_socket->readAll());
 
     
-    emit logMessage("收到");
     //TODO:需要在界面写相应的处理
     for (const auto& result : parsed) {
         if (result.valid) {

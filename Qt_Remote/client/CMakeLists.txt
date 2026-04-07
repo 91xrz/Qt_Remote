@@ -12,6 +12,9 @@ add_executable(client WIN32
     FileManagerWidget.cpp
     RemoteConnection.h
     RemoteConnection.cpp
+    ClientCommandHandler.h
+    ClientCommandHandler.cpp
+
 )
 
 target_include_directories(client PRIVATE

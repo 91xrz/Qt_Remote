@@ -3,7 +3,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_Qt_Remote.h"
 #include "RemoteConnection.h"
-//#include "DeviceServer.h"
+#include "ClientCommandHandler.h"
 
 class FileManagerWidget;
 
@@ -22,6 +22,8 @@ private:
    //DeviceServer* m_logic; // 持有逻辑对象
     RemoteConnection* m_connection;
     FileManagerWidget* m_fileManagerWidget;
+	ClientCommandHandler* m_commandHandler;
+
 private slots:
 
 };

@@ -13,8 +13,20 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     ui.btnStopService->setEnabled(false);
     // 1. 初始化网络模块
     m_connection = new RemoteConnection(this);
+	m_commandHandler = new ClientCommandHandler(this);
+
+    connect(m_connection, &RemoteConnection::commandReceived,
+        m_commandHandler, &ClientCommandHandler::onCommandReceived);
+
+
+
+
+
 
     // 2. 绑定网络日志到 UI 
+    connect(m_commandHandler, &ClientCommandHandler::sigLogMessage, this, [=](const QString& msg) {
+        ui.plainTextLogs->appendPlainText(msg);
+        });
     connect(m_connection, &RemoteConnection::logMessage, this, [=](const QString& msg) {
         ui.plainTextLogs->appendPlainText(msg);
         });
