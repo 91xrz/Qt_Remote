@@ -317,7 +317,7 @@ void FileManagerWidget::onDeleteFileFinished()
     if (!m_connection || m_currentRequestPath.isEmpty()) {
         return;
     }
-
+    m_tableModel->removeRows(0, m_tableModel->rowCount());
     m_isRequestingTree = false;
     m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
 }
