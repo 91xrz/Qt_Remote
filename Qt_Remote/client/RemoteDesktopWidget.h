@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include <QPixmap>
+#include <QElapsedTimer>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include "NetworkData.h"
@@ -22,6 +23,7 @@ public slots:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void closeEvent(QCloseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
@@ -34,4 +36,5 @@ private:
 private:
     RemoteConnection* m_connection = nullptr;
     QPixmap m_currentFrame;
+    QElapsedTimer m_mouseTimer;
 };

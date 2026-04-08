@@ -1,6 +1,7 @@
 #include "RemoteDesktopWidget.h"
 
 #include <QPainter>
+#include <QTimer>
 
 #include "RemoteConnection.h"
 
@@ -14,6 +15,8 @@ RemoteDesktopWidget::RemoteDesktopWidget(QWidget* parent)
     QPalette pal = palette();
     pal.setColor(QPalette::Window, Qt::black);
     setPalette(pal);
+
+    m_mouseTimer.start();
 }
 
 void RemoteDesktopWidget::setConnection(RemoteConnection* conn)
@@ -26,8 +29,12 @@ void RemoteDesktopWidget::onScreenDataReceived(const QPixmap& pixmap)
     m_currentFrame = pixmap;
     update();
 
-    if (m_connection) {
-        m_connection->sendPacket(CmdType::ScreenData);
+    if (m_connection && this->isVisible()) {
+        QTimer::singleShot(30, this, [this]() {
+            if (m_connection && this->isVisible()) {
+                m_connection->sendPacket(CmdType::ScreenData);
+            }
+        });
     }
 }
 
@@ -45,8 +52,17 @@ void RemoteDesktopWidget::paintEvent(QPaintEvent* event)
 
 void RemoteDesktopWidget::mouseMoveEvent(QMouseEvent* event)
 {
-    sendMouseEvent(MouseEventType::Move, event->pos());
+    if (m_mouseTimer.elapsed() > 30) {
+        sendMouseEvent(MouseEventType::Move, event->pos());
+        m_mouseTimer.restart();
+    }
     QWidget::mouseMoveEvent(event);
+}
+
+void RemoteDesktopWidget::closeEvent(QCloseEvent* event)
+{
+    m_currentFrame = QPixmap();
+    QWidget::closeEvent(event);
 }
 
 void RemoteDesktopWidget::mousePressEvent(QMouseEvent* event)
