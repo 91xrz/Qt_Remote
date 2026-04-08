@@ -3,6 +3,24 @@
 
 ClientCommandHandler::ClientCommandHandler(QObject* parent) : QObject(parent) {}
 
+bool ClientCommandHandler::prepareDownload(const QString& localPath)
+{
+    if (m_downloadFile.isOpen()) {
+        m_downloadFile.close();
+    }
+
+    m_downloadFile.setFileName(localPath);
+    if (!m_downloadFile.open(QIODevice::WriteOnly)) {
+        emit sigLogMessage(QStringLiteral("[文件下载] 本地文件创建失败: %1").arg(localPath));
+        return false;
+    }
+
+    m_expectedSize = 0;
+    m_receivedSize = 0;
+    m_isDownloading = false;
+    return true;
+}
+
 void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& body)
 {
     switch (type) {
@@ -37,6 +55,61 @@ void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& bod
     case CmdType::DeleFile: {
         emit sigLogMessage(QStringLiteral("[文件管理] 远端文件删除成功"));
         emit sigDeleteFileFinished();
+        break;
+    }
+    case CmdType::DownLoadFile: {
+        if (!m_isDownloading && body.size() == sizeof(qint64)) {
+            qint64 totalSize = 0;
+            memcpy(&totalSize, body.constData(), sizeof(qint64));
+
+            if (totalSize <= 0) {
+                const QString localPath = m_downloadFile.fileName();
+                if (m_downloadFile.isOpen()) {
+                    m_downloadFile.close();
+                }
+                if (!localPath.isEmpty()) {
+                    m_downloadFile.remove();
+                }
+                emit sigLogMessage(QStringLiteral("[文件下载] 远端文件不存在或打开失败"));
+                break;
+            }
+
+            m_expectedSize = totalSize;
+            m_receivedSize = 0;
+            m_isDownloading = true;
+            emit sigDownloadStarted(m_expectedSize);
+            emit sigLogMessage(QStringLiteral("[文件下载] 开始下载，总大小: %1 字节").arg(m_expectedSize));
+            break;
+        }
+
+        if (m_isDownloading) {
+            if (body.isEmpty()) {
+                if (m_downloadFile.isOpen()) {
+                    m_downloadFile.close();
+                }
+                m_isDownloading = false;
+                emit sigDownloadFinished();
+                emit sigLogMessage(QStringLiteral("[文件下载] 下载完成，保存路径: %1").arg(m_downloadFile.fileName()));
+                break;
+            }
+
+            if (!m_downloadFile.isOpen()) {
+                emit sigLogMessage(QStringLiteral("[文件下载] 本地文件未打开，写入失败"));
+                m_isDownloading = false;
+                break;
+            }
+
+            const qint64 written = m_downloadFile.write(body);
+            if (written < 0) {
+                emit sigLogMessage(QStringLiteral("[文件下载] 写入本地文件失败"));
+                m_isDownloading = false;
+                m_downloadFile.close();
+                break;
+            }
+
+            m_receivedSize += written;
+            emit sigDownloadProgress(m_receivedSize, m_expectedSize);
+        }
         break;
     }
     default:

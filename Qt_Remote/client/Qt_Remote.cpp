@@ -101,6 +101,7 @@ Qt_Remote::Qt_Remote(QWidget *parent)
             m_fileManagerWidget->resize(900, 560);
 
             m_fileManagerWidget->setConnection(m_connection);
+            m_fileManagerWidget->setCommandHandler(m_commandHandler);
             connect(m_commandHandler, &ClientCommandHandler::sigDriverInfoReceived,
                 m_fileManagerWidget, &FileManagerWidget::onDriverInfoReceived);
             connect(m_commandHandler, &ClientCommandHandler::sigDirInfoReceived,
@@ -109,6 +110,12 @@ Qt_Remote::Qt_Remote(QWidget *parent)
                 m_fileManagerWidget, &FileManagerWidget::onOpenFileFinished);
             connect(m_commandHandler, &ClientCommandHandler::sigDeleteFileFinished,
                 m_fileManagerWidget, &FileManagerWidget::onDeleteFileFinished);
+            connect(m_commandHandler, &ClientCommandHandler::sigDownloadStarted,
+                m_fileManagerWidget, &FileManagerWidget::onDownloadStarted);
+            connect(m_commandHandler, &ClientCommandHandler::sigDownloadProgress,
+                m_fileManagerWidget, &FileManagerWidget::onDownloadProgress);
+            connect(m_commandHandler, &ClientCommandHandler::sigDownloadFinished,
+                m_fileManagerWidget, &FileManagerWidget::onDownloadFinished);
         }
 
         // 显示、置顶、激活
