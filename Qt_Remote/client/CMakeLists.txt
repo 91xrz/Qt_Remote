@@ -14,6 +14,8 @@ add_executable(client WIN32
     RemoteConnection.cpp
     ClientCommandHandler.h
     ClientCommandHandler.cpp
+    RemoteDesktopWidget.h
+    RemoteDesktopWidget.cpp
 
 )
 

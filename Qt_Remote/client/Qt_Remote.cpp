@@ -1,6 +1,7 @@
 #include "Qt_Remote.h"
 //#include "ClientSession.h"
 #include "FileManagerWidget.h"
+#include "RemoteDesktopWidget.h"
 #include <QHostAddress>
 
 Qt_Remote::Qt_Remote(QWidget *parent)
@@ -124,6 +125,34 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         m_fileManagerWidget->activateWindow();
 
         m_connection->sendPacket(CmdType::DriverInfo);
+        });
+
+    connect(ui.btnRemoteDesktop, &QPushButton::clicked, this, [this]() {
+        if (!m_connection->isConnected()) {
+            ui.plainTextLogs->appendPlainText(QStringLiteral("【远程桌面】当前未连接，无法启动屏幕监控"));
+            return;
+        }
+
+        if (!m_desktopWidget) {
+            m_desktopWidget = new RemoteDesktopWidget();
+            m_desktopWidget->setWindowFlags(Qt::Window);
+            m_desktopWidget->setWindowTitle(QStringLiteral("远程桌面/屏幕监控"));
+            m_desktopWidget->resize(1024, 768);
+            m_desktopWidget->setConnection(m_connection);
+
+            connect(m_commandHandler, &ClientCommandHandler::sigScreenDataReceived,
+                m_desktopWidget, &RemoteDesktopWidget::onScreenDataReceived);
+        }
+        else {
+            m_desktopWidget->setConnection(m_connection);
+        }
+
+        m_desktopWidget->show();
+        m_desktopWidget->raise();
+        m_desktopWidget->activateWindow();
+
+        m_connection->sendPacket(CmdType::ScreenData);
+        ui.plainTextLogs->appendPlainText(QStringLiteral("【远程桌面】已请求首帧屏幕画面"));
         });
 
     connect(ui.btnTest, &QPushButton::clicked, this, [=]() {
