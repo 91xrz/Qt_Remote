@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QFile>
 #include "NetworkData.h"
 
 class ClientCommandHandler : public QObject
@@ -7,6 +8,7 @@ class ClientCommandHandler : public QObject
     Q_OBJECT
 public:
     explicit ClientCommandHandler(QObject* parent = nullptr);
+    bool prepareDownload(const QString& localPath);
 
 public slots:
     // 接收来自 RemoteConnection 的原始数据包
@@ -30,4 +32,15 @@ signals:
 
     // 删除文件回执
     void sigDeleteFileFinished();
+
+    // 下载流程信号
+    void sigDownloadStarted(qint64 totalSize);
+    void sigDownloadProgress(qint64 receivedSize, qint64 totalSize);
+    void sigDownloadFinished();
+
+private:
+    QFile m_downloadFile;
+    qint64 m_expectedSize = 0;
+    qint64 m_receivedSize = 0;
+    bool m_isDownloading = false;
 };

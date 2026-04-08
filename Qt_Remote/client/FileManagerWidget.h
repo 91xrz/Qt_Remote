@@ -2,6 +2,7 @@
 
 #include <QWidget>
 #include <QStringList>
+#include <QProgressDialog>
 #include "NetworkData.h"
 
 class QSplitter;
@@ -12,6 +13,7 @@ class QStandardItemModel;
 class QModelIndex;
 class QPoint;
 class RemoteConnection;
+class ClientCommandHandler;
 
 class FileManagerWidget : public QWidget
 {
@@ -20,12 +22,16 @@ class FileManagerWidget : public QWidget
 public:
     explicit FileManagerWidget(QWidget* parent = nullptr);
     void setConnection(RemoteConnection* conn);
+    void setCommandHandler(ClientCommandHandler* handler);
 
 public slots:
     void onDriverInfoReceived(const QStringList& drives);
     void onDirInfoReceived(const FILEINFO& fileInfo);
     void onOpenFileFinished();
     void onDeleteFileFinished();
+    void onDownloadStarted(qint64 totalSize);
+    void onDownloadProgress(qint64 receivedSize, qint64 totalSize);
+    void onDownloadFinished();
 
 private:
     void setupUi();
@@ -45,6 +51,8 @@ private:
     QStandardItemModel* m_treeModel;
     QStandardItemModel* m_tableModel;
     RemoteConnection* m_connection = nullptr;
+    ClientCommandHandler* m_cmdHandler = nullptr;
+    QProgressDialog* m_progressDlg = nullptr;
     bool m_isRequestingTree = false;
     QStandardItem* m_expandingItem = nullptr;
     QString m_currentRequestPath;

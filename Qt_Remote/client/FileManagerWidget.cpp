@@ -1,4 +1,5 @@
 #include "FileManagerWidget.h"
+#include "ClientCommandHandler.h"
 #include "RemoteConnection.h"
 #include "NetworkData.h"
 
@@ -10,6 +11,7 @@
 #include <QStyle>
 #include <QItemSelectionModel>
 #include <QMenu>
+#include <QMessageBox>
 #include <QModelIndex>
 #include <QSplitter>
 #include <QStandardItem>
@@ -17,6 +19,7 @@
 #include <QTableView>
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QFileDialog>
 namespace {
 constexpr auto kDummyText = "Loading...";
 }
@@ -49,6 +52,11 @@ FileManagerWidget::FileManagerWidget(QWidget* parent)
 void FileManagerWidget::setConnection(RemoteConnection* conn)
 {
     m_connection = conn;
+}
+
+void FileManagerWidget::setCommandHandler(ClientCommandHandler* handler)
+{
+    m_cmdHandler = handler;
 }
 
 void FileManagerWidget::setupUi()
@@ -268,7 +276,23 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
         qDebug() << "[文件管理] 已发送打开请求:" << fullPath;
     }
     else if (selectedAction == downloadAction) {
-        qDebug() << "[文件管理] 下载:" << fileName;
+        if (!m_connection || !m_cmdHandler) {
+            QMessageBox::warning(this, QStringLiteral("下载失败"), QStringLiteral("连接或命令处理器未初始化"));
+            return;
+        }
+
+        const QString localPath = QFileDialog::getSaveFileName(this, QStringLiteral("保存文件"), fileName);
+        if (localPath.isEmpty()) {
+            return;
+        }
+
+        if (!m_cmdHandler->prepareDownload(localPath)) {
+            QMessageBox::warning(this, QStringLiteral("下载失败"), QStringLiteral("本地文件创建失败，请检查路径权限"));
+            return;
+        }
+
+        m_connection->sendPacket(CmdType::DownLoadFile, fullPath.toLocal8Bit());
+        qDebug() << "[文件管理] 已发送下载请求:" << fullPath << "->" << localPath;
     }
     else if (selectedAction == deleteAction) {
         if (!m_connection) {
@@ -278,7 +302,7 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
         m_connection->sendPacket(CmdType::DeleFile, fullPath.toLocal8Bit());
         qDebug() << "[文件管理] 已发送删除请求:" << fullPath;
     }
-  
+
 }
 
 void FileManagerWidget::onOpenFileFinished()
@@ -296,4 +320,45 @@ void FileManagerWidget::onDeleteFileFinished()
 
     m_isRequestingTree = false;
     m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
+}
+
+void FileManagerWidget::onDownloadStarted(qint64 totalSize)
+{
+    if (m_progressDlg) {
+        m_progressDlg->deleteLater();
+        m_progressDlg = nullptr;
+    }
+
+    m_progressDlg = new QProgressDialog(QStringLiteral("准备下载..."), QString(), 0, 100, this);
+    m_progressDlg->setWindowModality(Qt::WindowModal);
+    m_progressDlg->setCancelButton(nullptr);
+    m_progressDlg->setMinimumDuration(0);
+    m_progressDlg->setValue(0);
+    m_progressDlg->setLabelText(QStringLiteral("文件总大小: %1 MB").arg(totalSize / 1024.0 / 1024.0, 0, 'f', 2));
+    m_progressDlg->show();
+}
+
+void FileManagerWidget::onDownloadProgress(qint64 receivedSize, qint64 totalSize)
+{
+    if (!m_progressDlg || totalSize <= 0) {
+        return;
+    }
+
+    const int progress = static_cast<int>((receivedSize * 100) / totalSize);
+    m_progressDlg->setValue(qBound(0, progress, 100));
+    m_progressDlg->setLabelText(QStringLiteral("已下载: %1 MB / %2 MB")
+        .arg(receivedSize / 1024.0 / 1024.0, 0, 'f', 2)
+        .arg(totalSize / 1024.0 / 1024.0, 0, 'f', 2));
+}
+
+void FileManagerWidget::onDownloadFinished()
+{
+    if (m_progressDlg) {
+        m_progressDlg->setValue(100);
+        m_progressDlg->hide();
+        m_progressDlg->deleteLater();
+        m_progressDlg = nullptr;
+    }
+
+    QMessageBox::information(this, QStringLiteral("下载完成"), QStringLiteral("文件下载完成"));
 }
