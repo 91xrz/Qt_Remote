@@ -6,6 +6,7 @@
 #include "ClientCommandHandler.h"
 
 class FileManagerWidget;
+class RemoteDesktopWidget;
 
 #pragma execution_character_set("utf-8")
 // 视图层
@@ -22,6 +23,7 @@ private:
    //DeviceServer* m_logic; // 持有逻辑对象
     RemoteConnection* m_connection = nullptr;
     FileManagerWidget* m_fileManagerWidget = nullptr;
+    RemoteDesktopWidget* m_desktopWidget = nullptr;
 	ClientCommandHandler* m_commandHandler = nullptr;
 
 private slots:

@@ -121,6 +121,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnRemoteDesktop">
+        <property name="text">
+         <string>远程桌面</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacerActions">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
