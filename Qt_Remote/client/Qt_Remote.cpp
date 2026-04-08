@@ -137,7 +137,7 @@ Qt_Remote::Qt_Remote(QWidget *parent)
             m_desktopWidget = new RemoteDesktopWidget();
             m_desktopWidget->setWindowFlags(Qt::Window);
             m_desktopWidget->setWindowTitle(QStringLiteral("远程桌面/屏幕监控"));
-            m_desktopWidget->resize(1024, 768);
+            m_desktopWidget->resize(1920, 1080);
             m_desktopWidget->setConnection(m_connection);
 
             connect(m_commandHandler, &ClientCommandHandler::sigScreenDataReceived,

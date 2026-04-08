@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QTcpSocket>
+#include <QNetworkProxy>
 #include "NetworkData.h"
 #include "PacketStreamParser.h"
 

@@ -20,6 +20,9 @@ void RemoteConnection::connectToServer(const QString& ip, quint16 port)
         emit logMessage(QStringLiteral("正在连接中，请稍候..."));
         return;
     }
+
+    m_socket->setProxy(QNetworkProxy::NoProxy);
+
     emit logMessage(QString("正在连接到 %1:%2 ...").arg(ip).arg(port));
     m_socket->connectToHost(ip, port);
 }
