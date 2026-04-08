@@ -27,6 +27,9 @@ void  CommandHandler::onHandlerCommand(CmdType type, QByteArray body)
     case CmdType::MouseInput:
         HandleMouseEvent(body);
         break;
+    case CmdType::ScreenData:
+        SendScreen();
+        break;
     case CmdType::LockMachine:
         LockMachine(body);
         break;
@@ -351,7 +354,7 @@ void CommandHandler::SendScreen()
     // 【核心优化】绝对不要用 PNG！改用 JPG，并将画质设为 50-70
     // JPG 的编码速度极快，且网络包体积会缩小 5-10 倍
     //貌似PNG的画质更好
-    pixmap.save(&buffer, "PNG", 50);
+    pixmap.save(&buffer, "JPG", 50);
 
     //测试代码
     /*QFile file("test_screen_quality50.jpg");

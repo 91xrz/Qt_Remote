@@ -20,7 +20,6 @@ public:
 
 private:
     Ui::Qt_RemoteClass ui;
-   //DeviceServer* m_logic; // 持有逻辑对象
     RemoteConnection* m_connection = nullptr;
     FileManagerWidget* m_fileManagerWidget = nullptr;
     RemoteDesktopWidget* m_desktopWidget = nullptr;
