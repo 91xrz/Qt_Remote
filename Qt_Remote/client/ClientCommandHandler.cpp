@@ -112,6 +112,14 @@ void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& bod
         }
         break;
     }
+    case CmdType::LockMachine: {
+        emit sigLogMessage(QStringLiteral("[远程控制] 锁机指令执行成功"));
+        break;
+    }
+    case CmdType::UnLockMachine: {
+        emit sigLogMessage(QStringLiteral("[远程控制] 解锁指令执行成功"));
+        break;
+    }
     default:
         break;
     }
