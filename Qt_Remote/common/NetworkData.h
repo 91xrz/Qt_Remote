@@ -75,6 +75,11 @@ typedef struct RemoteComputerInfo {
     RemoteComputerInfo() : screen_width(0), screen_height(0), os_version(""), computer_name(""), ip_address("") {}
 }RCInfo, * PRCINFO;
 
+//锁机返回值
+enum class LockResult : char {
+    LockSuccess = 1,
+    LockFailed = 0
+};
 
 // 2. 协议头结构体
 // 注意：校验位通常不放在头里，而是放在整个包的最后，或者头的最后

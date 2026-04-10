@@ -375,20 +375,23 @@ void CommandHandler::SendScreen()
 
 void CommandHandler::LockMachine(const QByteArray&)
 {
+    QByteArray payload;
     if (m_lockWidget->isHidden()) {
         m_lockWidget->lock();
         emit logMessage("【调试】机器已锁定");
+        payload.append(static_cast<char>(LockResult::LockSuccess));
+        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, payload));
     }
     else {
         // 如果已经锁了，就回一个失败或者通知的包
-        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, QByteArray()));
+		payload.append(static_cast<char>(LockResult::LockFailed));
+        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, payload));
     }
 }
 
 void CommandHandler::UnlockMachine(const QByteArray&)
 {
     m_lockWidget->unlock();
-
     // 发送解锁成功的回执 
     emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
     emit logMessage("【调试】机器已解锁");

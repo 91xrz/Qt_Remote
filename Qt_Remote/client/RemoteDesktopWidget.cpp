@@ -235,6 +235,7 @@ bool RemoteDesktopWidget::isInRemoteDisplay(const QPoint& pos) const
     return remoteDisplayRect().contains(pos);
 }
 
+//TODO:解锁和锁机需要互斥使用，后续可以改成一个按钮，点击后根据当前状态发送锁机或解锁命令
 void RemoteDesktopWidget::sendLockMachineCommand()
 {
     if (m_connection) {

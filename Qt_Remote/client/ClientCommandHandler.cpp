@@ -113,7 +113,14 @@ void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& bod
         break;
     }
     case CmdType::LockMachine: {
-        emit sigLogMessage(QStringLiteral("[远程控制] 锁机指令执行成功"));
+        auto result = static_cast<LockResult>(body.at(0));
+
+        if (result == LockResult::LockSuccess) {
+            emit sigLogMessage("[远程控制] 锁机指令执行成功");
+        }
+        else {
+            emit sigLogMessage("[远程控制] 锁机失败或已锁定");
+        }
         break;
     }
     case CmdType::UnLockMachine: {
