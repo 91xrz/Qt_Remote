@@ -1,20 +1,47 @@
 #include "RemoteDesktopWidget.h"
 
-#include <QPainter>
+#include <QHBoxLayout>
 #include <QTimer>
+#include <QVBoxLayout>
+#include <QEvent>
 
 #include "RemoteConnection.h"
 
 RemoteDesktopWidget::RemoteDesktopWidget(QWidget* parent)
     : QWidget(parent)
 {
-    setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
-    setAutoFillBackground(true);
 
-    QPalette pal = palette();
-    pal.setColor(QPalette::Window, Qt::black);
-    setPalette(pal);
+    auto* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(8, 8, 8, 8);
+    mainLayout->setSpacing(6);
+
+    m_toolbarWidget = new QWidget(this);
+    auto* toolbarLayout = new QHBoxLayout(m_toolbarWidget);
+    toolbarLayout->setContentsMargins(0, 0, 0, 0);
+    toolbarLayout->setSpacing(8);
+
+    m_btnLockMachine = new QPushButton(QStringLiteral("锁机"), m_toolbarWidget);
+    m_btnUnlockMachine = new QPushButton(QStringLiteral("解锁"), m_toolbarWidget);
+    m_btnLockMachine->setEnabled(false);
+    m_btnUnlockMachine->setEnabled(false);
+
+    toolbarLayout->addWidget(m_btnLockMachine);
+    toolbarLayout->addWidget(m_btnUnlockMachine);
+    toolbarLayout->addStretch();
+
+    m_screenLabel = new QLabel(this);
+    m_screenLabel->setAlignment(Qt::AlignCenter);
+    m_screenLabel->setStyleSheet("background-color: black;");
+    m_screenLabel->setScaledContents(true);
+    m_screenLabel->setMouseTracking(true);
+    m_screenLabel->installEventFilter(this);
+
+    mainLayout->addWidget(m_toolbarWidget);
+    mainLayout->addWidget(m_screenLabel, 1);
+
+    connect(m_btnLockMachine, &QPushButton::clicked, this, &RemoteDesktopWidget::sigLockClicked);
+    connect(m_btnUnlockMachine, &QPushButton::clicked, this, &RemoteDesktopWidget::sigUnlockClicked);
 
     m_mouseTimer.start();
 }
@@ -24,10 +51,20 @@ void RemoteDesktopWidget::setConnection(RemoteConnection* conn)
     m_connection = conn;
 }
 
+void RemoteDesktopWidget::setLockButtonsEnabled(bool lockEnabled, bool unlockEnabled)
+{
+    if (m_btnLockMachine) {
+        m_btnLockMachine->setEnabled(lockEnabled);
+    }
+    if (m_btnUnlockMachine) {
+        m_btnUnlockMachine->setEnabled(unlockEnabled);
+    }
+}
+
 void RemoteDesktopWidget::onScreenDataReceived(const QPixmap& pixmap)
 {
     m_currentFrame = pixmap;
-    update();
+    m_screenLabel->setPixmap(m_currentFrame);
 
     if (m_connection && this->isVisible()) {
         QTimer::singleShot(30, this, [this]() {
@@ -38,119 +75,109 @@ void RemoteDesktopWidget::onScreenDataReceived(const QPixmap& pixmap)
     }
 }
 
-void RemoteDesktopWidget::paintEvent(QPaintEvent* event)
-{
-    Q_UNUSED(event);
-
-    QPainter painter(this);
-    painter.fillRect(rect(), Qt::black);
-
-    if (!m_currentFrame.isNull()) {
-        painter.drawPixmap(rect(), m_currentFrame);
-    }
-}
-
-void RemoteDesktopWidget::mouseMoveEvent(QMouseEvent* event)
-{
-    if (m_mouseTimer.elapsed() > 30) {
-        sendMouseEvent(MouseEventType::Move, event->pos());
-        m_mouseTimer.restart();
-    }
-    QWidget::mouseMoveEvent(event);
-}
-
 void RemoteDesktopWidget::closeEvent(QCloseEvent* event)
 {
     m_currentFrame = QPixmap();
+    m_screenLabel->clear();
     QWidget::closeEvent(event);
 }
 
-void RemoteDesktopWidget::mousePressEvent(QMouseEvent* event)
+bool RemoteDesktopWidget::eventFilter(QObject* watched, QEvent* event)
 {
-    MouseEventType type = MouseEventType::None;
-    switch (event->button()) {
-    case Qt::LeftButton:
-        type = MouseEventType::LeftPress;
-        break;
-    case Qt::RightButton:
-        type = MouseEventType::RightPress;
-        break;
-    case Qt::MiddleButton:
-        type = MouseEventType::MiddlePress;
-        break;
+    if (watched != m_screenLabel) {
+        return QWidget::eventFilter(watched, event);
+    }
+
+    switch (event->type()) {
+    case QEvent::MouseMove: {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        if (m_mouseTimer.elapsed() > 30) {
+            sendMouseEvent(MouseEventType::Move, clampLocalPos(mouseEvent->pos()));
+            m_mouseTimer.restart();
+        }
+        return false;
+    }
+    case QEvent::MouseButtonPress: {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        MouseEventType type = MouseEventType::None;
+        switch (mouseEvent->button()) {
+        case Qt::LeftButton:
+            type = MouseEventType::LeftPress;
+            break;
+        case Qt::RightButton:
+            type = MouseEventType::RightPress;
+            break;
+        case Qt::MiddleButton:
+            type = MouseEventType::MiddlePress;
+            break;
+        default:
+            break;
+        }
+        if (type != MouseEventType::None) {
+            sendMouseEvent(type, clampLocalPos(mouseEvent->pos()));
+        }
+        return false;
+    }
+    case QEvent::MouseButtonRelease: {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        MouseEventType type = MouseEventType::None;
+        switch (mouseEvent->button()) {
+        case Qt::LeftButton:
+            type = MouseEventType::LeftRelease;
+            break;
+        case Qt::RightButton:
+            type = MouseEventType::RightRelease;
+            break;
+        case Qt::MiddleButton:
+            type = MouseEventType::MiddleRelease;
+            break;
+        default:
+            break;
+        }
+        if (type != MouseEventType::None) {
+            sendMouseEvent(type, clampLocalPos(mouseEvent->pos()));
+        }
+        return false;
+    }
+    case QEvent::MouseButtonDblClick: {
+        auto* mouseEvent = static_cast<QMouseEvent*>(event);
+        MouseEventType type = MouseEventType::None;
+        switch (mouseEvent->button()) {
+        case Qt::LeftButton:
+            type = MouseEventType::LeftDoubleClick;
+            break;
+        case Qt::RightButton:
+            type = MouseEventType::RightDoubleClick;
+            break;
+        case Qt::MiddleButton:
+            type = MouseEventType::MiddleDoubleClick;
+            break;
+        default:
+            break;
+        }
+        if (type != MouseEventType::None) {
+            sendMouseEvent(type, clampLocalPos(mouseEvent->pos()));
+        }
+        return false;
+    }
+    case QEvent::Wheel: {
+        auto* wheelEvent = static_cast<QWheelEvent*>(event);
+        sendMouseEvent(MouseEventType::Scroll, clampLocalPos(wheelEvent->position().toPoint()), wheelEvent->angleDelta().y());
+        return false;
+    }
     default:
-        break;
+        return QWidget::eventFilter(watched, event);
     }
-
-    if (type != MouseEventType::None) {
-        sendMouseEvent(type, event->pos());
-    }
-
-    QWidget::mousePressEvent(event);
-}
-
-void RemoteDesktopWidget::mouseReleaseEvent(QMouseEvent* event)
-{
-    MouseEventType type = MouseEventType::None;
-    switch (event->button()) {
-    case Qt::LeftButton:
-        type = MouseEventType::LeftRelease;
-        break;
-    case Qt::RightButton:
-        type = MouseEventType::RightRelease;
-        break;
-    case Qt::MiddleButton:
-        type = MouseEventType::MiddleRelease;
-        break;
-    default:
-        break;
-    }
-
-    if (type != MouseEventType::None) {
-        sendMouseEvent(type, event->pos());
-    }
-
-    QWidget::mouseReleaseEvent(event);
-}
-
-void RemoteDesktopWidget::mouseDoubleClickEvent(QMouseEvent* event)
-{
-    MouseEventType type = MouseEventType::None;
-    switch (event->button()) {
-    case Qt::LeftButton:
-        type = MouseEventType::LeftDoubleClick;
-        break;
-    case Qt::RightButton:
-        type = MouseEventType::RightDoubleClick;
-        break;
-    case Qt::MiddleButton:
-        type = MouseEventType::MiddleDoubleClick;
-        break;
-    default:
-        break;
-    }
-
-    if (type != MouseEventType::None) {
-        sendMouseEvent(type, event->pos());
-    }
-
-    QWidget::mouseDoubleClickEvent(event);
-}
-
-void RemoteDesktopWidget::wheelEvent(QWheelEvent* event)
-{
-    sendMouseEvent(MouseEventType::Scroll, event->position().toPoint(), event->angleDelta().y());
-    QWidget::wheelEvent(event);
 }
 
 void RemoteDesktopWidget::sendMouseEvent(MouseEventType type, const QPoint& localPos, int scrollDelta)
 {
-    if (!m_connection || m_currentFrame.isNull()) {
+    if (!m_connection || m_currentFrame.isNull() || !m_screenLabel) {
         return;
     }
 
-    const int localW = width();
-    const int localH = height();
+    const int localW = m_screenLabel->width();
+    const int localH = m_screenLabel->height();
     const int remoteW = m_currentFrame.width();
     const int remoteH = m_currentFrame.height();
 
@@ -170,4 +197,15 @@ void RemoteDesktopWidget::sendMouseEvent(MouseEventType type, const QPoint& loca
     QByteArray body;
     body.append(reinterpret_cast<const char*>(&mouseEvent), sizeof(MouseEvent));
     m_connection->sendPacket(CmdType::MouseInput, body);
+}
+
+QPoint RemoteDesktopWidget::clampLocalPos(const QPoint& localPos) const
+{
+    if (!m_screenLabel) {
+        return localPos;
+    }
+
+    const int x = qBound(0, localPos.x(), qMax(0, m_screenLabel->width() - 1));
+    const int y = qBound(0, localPos.y(), qMax(0, m_screenLabel->height() - 1));
+    return QPoint(x, y);
 }

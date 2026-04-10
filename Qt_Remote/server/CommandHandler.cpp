@@ -377,10 +377,11 @@ void CommandHandler::LockMachine(const QByteArray&)
 {
     if (m_lockWidget->isHidden()) {
         m_lockWidget->lock();
+        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, QByteArray()));
         emit logMessage("【调试】机器已锁定");
     }
     else {
-        // 如果已经锁了，就回一个失败或者通知的包
+        // 如果已经锁了，也回一个状态通知包，方便主控端刷新按钮状态
         emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, QByteArray()));
     }
 }

@@ -24,6 +24,9 @@ private:
     FileManagerWidget* m_fileManagerWidget = nullptr;
     RemoteDesktopWidget* m_desktopWidget = nullptr;
 	ClientCommandHandler* m_commandHandler = nullptr;
+    bool m_isRemoteLocked = false;
+
+    void updateLockButtons();
 
 private slots:
 

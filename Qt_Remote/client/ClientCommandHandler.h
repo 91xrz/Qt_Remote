@@ -37,6 +37,7 @@ signals:
     void sigDownloadStarted(qint64 totalSize);
     void sigDownloadProgress(qint64 receivedSize, qint64 totalSize);
     void sigDownloadFinished();
+    void sigLockStateChanged(bool isLocked);
 
 private:
     QFile m_downloadFile;

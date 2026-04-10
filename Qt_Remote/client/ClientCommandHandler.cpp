@@ -112,6 +112,16 @@ void ClientCommandHandler::onCommandReceived(CmdType type, const QByteArray& bod
         }
         break;
     }
+    case CmdType::LockMachine: {
+        emit sigLogMessage(QStringLiteral("[锁机控制] 远端已锁机"));
+        emit sigLockStateChanged(true);
+        break;
+    }
+    case CmdType::UnLockMachine: {
+        emit sigLogMessage(QStringLiteral("[锁机控制] 远端已解锁"));
+        emit sigLockStateChanged(false);
+        break;
+    }
     default:
         break;
     }

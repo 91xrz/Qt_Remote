@@ -3,6 +3,7 @@
 #include "FileManagerWidget.h"
 #include "RemoteDesktopWidget.h"
 #include <QHostAddress>
+#include <QMessageBox>
 
 Qt_Remote::Qt_Remote(QWidget *parent)
     : QMainWindow(parent)
@@ -37,6 +38,8 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         ui.btnStopService->setEnabled(true);
         ui.lineEditTargetIp->setEnabled(false);
         ui.lineEditPort->setEnabled(false);
+        m_isRemoteLocked = false;
+        updateLockButtons();
         ui.plainTextLogs->appendPlainText(QStringLiteral("已连接到目标主机"));
         });
 
@@ -46,6 +49,8 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         ui.btnStopService->setEnabled(false);
         ui.lineEditTargetIp->setEnabled(true);
         ui.lineEditPort->setEnabled(true);
+        m_isRemoteLocked = false;
+        updateLockButtons();
         ui.plainTextLogs->appendPlainText(QStringLiteral("已断开连接"));
         });
 
@@ -56,6 +61,8 @@ Qt_Remote::Qt_Remote(QWidget *parent)
         ui.btnStopService->setEnabled(false);
         ui.lineEditTargetIp->setEnabled(true);
         ui.lineEditPort->setEnabled(true);
+        m_isRemoteLocked = false;
+        updateLockButtons();
         });
 
     connect(ui.btnStartService, &QPushButton::clicked, this, [=]() {
@@ -86,6 +93,11 @@ Qt_Remote::Qt_Remote(QWidget *parent)
     connect(ui.btnStopService, &QPushButton::clicked, this, [=]() {
         ui.plainTextLogs->appendPlainText(QStringLiteral("请求断开连接"));
         m_connection->disconnectFromServer();
+        });
+
+    connect(m_commandHandler, &ClientCommandHandler::sigLockStateChanged, this, [=](bool isLocked) {
+        m_isRemoteLocked = isLocked;
+        updateLockButtons();
         });
   
     //清空日志
@@ -139,12 +151,46 @@ Qt_Remote::Qt_Remote(QWidget *parent)
             m_desktopWidget->setWindowTitle(QStringLiteral("远程桌面/屏幕监控"));
             m_desktopWidget->resize(1920, 1080);
             m_desktopWidget->setConnection(m_connection);
+            updateLockButtons();
 
             connect(m_commandHandler, &ClientCommandHandler::sigScreenDataReceived,
                 m_desktopWidget, &RemoteDesktopWidget::onScreenDataReceived);
+
+            connect(m_desktopWidget, &RemoteDesktopWidget::sigLockClicked, this, [=]() {
+                if (!m_connection->isConnected()) {
+                    ui.plainTextLogs->appendPlainText(QStringLiteral("[锁机控制] 当前未连接，无法发送锁机指令"));
+                    updateLockButtons();
+                    return;
+                }
+
+                const auto btn = QMessageBox::question(
+                    this,
+                    QStringLiteral("确认锁机"),
+                    QStringLiteral("确认要锁定远端机器吗？锁定后需在远端解锁。"),
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::No);
+                if (btn != QMessageBox::Yes) {
+                    ui.plainTextLogs->appendPlainText(QStringLiteral("[锁机控制] 已取消锁机操作"));
+                    return;
+                }
+
+                ui.plainTextLogs->appendPlainText(QStringLiteral("[锁机控制] 发送锁机指令"));
+                m_connection->sendPacket(CmdType::LockMachine);
+                });
+
+            connect(m_desktopWidget, &RemoteDesktopWidget::sigUnlockClicked, this, [=]() {
+                if (!m_connection->isConnected()) {
+                    ui.plainTextLogs->appendPlainText(QStringLiteral("[锁机控制] 当前未连接，无法发送解锁指令"));
+                    updateLockButtons();
+                    return;
+                }
+                ui.plainTextLogs->appendPlainText(QStringLiteral("[锁机控制] 发送解锁指令"));
+                m_connection->sendPacket(CmdType::UnLockMachine);
+                });
         }
         else {
             m_desktopWidget->setConnection(m_connection);
+            updateLockButtons();
         }
 
         m_desktopWidget->show();
@@ -167,3 +213,18 @@ Qt_Remote::Qt_Remote(QWidget *parent)
 
 Qt_Remote::~Qt_Remote()
 {}
+
+void Qt_Remote::updateLockButtons()
+{
+    const bool connected = m_connection && m_connection->isConnected();
+    if (!m_desktopWidget) {
+        return;
+    }
+
+    if (!connected) {
+        m_desktopWidget->setLockButtonsEnabled(false, false);
+        return;
+    }
+
+    m_desktopWidget->setLockButtonsEnabled(!m_isRemoteLocked, m_isRemoteLocked);
+}
