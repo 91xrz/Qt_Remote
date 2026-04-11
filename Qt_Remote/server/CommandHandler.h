@@ -26,7 +26,11 @@ public:
 			emit logMessage("【调试】本地用户已通过 Insert 键解锁");
 			emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
 			});
+		initCommandMap();
 	}
+
+	// 定义统一的函数签名
+	using ActionFunc = std::function<void(const QByteArray&)>;
 
 public slots:
 	void onHandlerCommand(CmdType type, QByteArray body);
@@ -53,5 +57,9 @@ public:
 	void UnlockMachine(const QByteArray& /*body*/);
 private:
 	LockScreenWidget* m_lockWidget = nullptr;
+	QHash<CmdType, ActionFunc> m_commandMap; // 指令映射表
+
+private:
+	void initCommandMap(); // 初始化路由表
 };
 

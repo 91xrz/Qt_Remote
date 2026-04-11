@@ -72,6 +72,8 @@ void DeviceServer::onNewConnection()
             m_cmdHandler, &CommandHandler::onHandlerCommand);
         connect(m_cmdHandler, &CommandHandler::sendPacket,
             session, &ClientSession::sendRaw);
+        connect(m_cmdHandler, &CommandHandler::logMessage,
+			this, &DeviceServer::logMessage);
 
 
         connect(session, &ClientSession::sessionClosed, this, [this](ClientSession* s) {

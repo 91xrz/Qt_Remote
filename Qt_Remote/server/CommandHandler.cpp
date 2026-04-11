@@ -5,41 +5,16 @@
 
 void  CommandHandler::onHandlerCommand(CmdType type, QByteArray body)
 {
-	switch (type)
-	{
-	case CmdType::None:
-		break;
-	case CmdType::DriverInfo:
-        MakeDriverInfo();
-		break;
-	case CmdType::DirInfo:
-        MakeDirInfo(body);
-		break;
-    case CmdType::RunFile:
-        RunFile(body);
-        break;
-    case CmdType::DeleFile:
-        DeleFile(body);
-		break;
-     case CmdType::DownLoadFile:
-        DownLoadFile(body);
-		break;
-    case CmdType::MouseInput:
-        HandleMouseEvent(body);
-        break;
-    case CmdType::ScreenData:
-        SendScreen();
-        break;
-    case CmdType::LockMachine:
-        LockMachine(body);
-        break;
-    case CmdType::UnLockMachine:
-        UnlockMachine(body);
-        break;
-	default:
-		break;
-	}
-
+    // 查找指令
+    auto it = m_commandMap.find(type);
+    if (it != m_commandMap.end()) {
+        // 执行对应的回调函数
+        it.value()(body);
+    }
+    else {
+        // 可以加上容错处理
+        emit logMessage(QString("【警告】收到未注册的指令类型: %1").arg(static_cast<int>(type)));
+    }
 
 }
 
@@ -395,4 +370,18 @@ void CommandHandler::UnlockMachine(const QByteArray&)
     // 发送解锁成功的回执 
     emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
     emit logMessage("【调试】机器已解锁");
+}
+
+void CommandHandler::initCommandMap()
+{
+    // 使用 Lambda 表达式捕获 this，并抹平参数差异
+    m_commandMap[CmdType::DriverInfo] = [this](const QByteArray&) { MakeDriverInfo(); };
+    m_commandMap[CmdType::DirInfo] = [this](const QByteArray& body) { MakeDirInfo(body); };
+    m_commandMap[CmdType::RunFile] = [this](const QByteArray& body) { RunFile(body); };
+    m_commandMap[CmdType::DeleFile] = [this](const QByteArray& body) { DeleFile(body); };
+    m_commandMap[CmdType::DownLoadFile] = [this](const QByteArray& body) { DownLoadFile(body); };
+    m_commandMap[CmdType::MouseInput] = [this](const QByteArray& body) { HandleMouseEvent(body); };
+    m_commandMap[CmdType::ScreenData] = [this](const QByteArray&) { SendScreen(); };
+    m_commandMap[CmdType::LockMachine] = [this](const QByteArray& body) { LockMachine(body); };
+    m_commandMap[CmdType::UnLockMachine] = [this](const QByteArray& body) { UnlockMachine(body); };
 }

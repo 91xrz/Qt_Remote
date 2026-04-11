@@ -10,6 +10,13 @@ public:
     explicit ClientCommandHandler(QObject* parent = nullptr);
     bool prepareDownload(const QString& localPath);
 
+private:
+    using ActionFunc = std::function<void(const QByteArray&)>;
+    QHash<CmdType, ActionFunc> m_commandMap;
+    void initCommandMap();
+
+    // 将 switch 里的庞大逻辑抽离成私有函数
+    void handleDownloadFile(const QByteArray& body);
 public slots:
     // 接收来自 RemoteConnection 的原始数据包
     void onCommandReceived(CmdType type, const QByteArray& body);
@@ -43,4 +50,6 @@ private:
     qint64 m_expectedSize = 0;
     qint64 m_receivedSize = 0;
     bool m_isDownloading = false;
+
+   
 };
