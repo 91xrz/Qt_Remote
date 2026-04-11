@@ -35,8 +35,7 @@ void CommandHandler::MakeDriverInfo()
 	emit logMessage(QString("【调试】磁盘获取成功: %1").arg(result.c_str()));
 	
 	QByteArray body(result.c_str(), result.size());
-	body = NetworkPacket::pack(CmdType::DriverInfo, body);
-	emit sendPacket(body);
+	emit sendData(CmdType::DriverInfo, body);
 }
 
 //要拿到盘符或者当前的路径
@@ -54,7 +53,7 @@ void CommandHandler::MakeDirInfo(const QByteArray& body)
         FILEINFO endInfo; // 结构体默认 HasNext = FALSE
         endInfo.HasNext = FALSE;
         QByteArray sendBody(reinterpret_cast<const char*>(&endInfo), sizeof(FILEINFO));
-        emit sendPacket(NetworkPacket::pack(CmdType::DirInfo, sendBody));
+        emit sendData(CmdType::DirInfo, sendBody);
         return;
     }
 
@@ -76,14 +75,14 @@ void CommandHandler::MakeDirInfo(const QByteArray& body)
 
         // 打包发送单个文件信息
         QByteArray sendBody(reinterpret_cast<const char*>(&info), sizeof(FILEINFO));
-        emit sendPacket(NetworkPacket::pack(CmdType::DirInfo, sendBody));
+        emit sendData(CmdType::DirInfo, sendBody);
     }
 
     // 5. 遍历完毕，发送最后一个标志结束的空包
     FILEINFO endInfo;
     endInfo.HasNext = FALSE;
     QByteArray endBody(reinterpret_cast<const char*>(&endInfo), sizeof(FILEINFO));
-    emit sendPacket(NetworkPacket::pack(CmdType::DirInfo, endBody));
+    emit sendData(CmdType::DirInfo, endBody);
 
     emit logMessage("【调试】目录信息全部发送完毕！");
 }
@@ -118,7 +117,7 @@ void CommandHandler::RunFile(const QByteArray& body)
 
     // 4. 打包发送成功回执 (假设你的 CmdType 枚举里运行文件是 RunFile)
     // 对应你原来的 CPacket(3, NULL, 0)
-    emit sendPacket(NetworkPacket::pack(CmdType::RunFile, QByteArray()));
+    emit sendData(CmdType::RunFile, QByteArray());
     emit logMessage("【调试】文件执行指令已成功响应！");
 }
 
@@ -157,7 +156,7 @@ void CommandHandler::DeleFile(const QByteArray& body)
 
     // 4. 打包发送成功回执 (假设你的 CmdType 枚举里删除是 DeleteFile)
     // 对应你原来 CPacket(9, NULL, 0)
-    emit sendPacket(NetworkPacket::pack(CmdType::DeleFile, QByteArray()));
+    emit sendData(CmdType::DeleFile, QByteArray());
     emit logMessage("【调试】删除成功，回执已发送！");
 }
 
@@ -176,15 +175,14 @@ void CommandHandler::DownLoadFile(const QByteArray& body)
         // 文件打开失败，发送一个大小为 0 的包头回去
         qint64 zeroSize = 0;
         QByteArray errorBody(reinterpret_cast<const char*>(&zeroSize), sizeof(qint64));
-        emit sendPacket(NetworkPacket::pack(CmdType::DownLoadFile,errorBody));
+        emit sendData(CmdType::DownLoadFile, errorBody);
         return;
     }
 
     // 3. 获取文件大小并发送包头 (对应你原来的发送 8 字节文件大小)
     qint64 fileSize = file.size();
     QByteArray headerBody(reinterpret_cast<const char*>(&fileSize), sizeof(qint64));
-    emit sendPacket(NetworkPacket::pack(CmdType::DownLoadFile,
-         headerBody));
+    emit sendData(CmdType::DownLoadFile, headerBody);
     emit logMessage(QString("【调试】文件大小: %1 字节，开始传输...").arg(fileSize));
 
     // 4. 分块读取并发送
@@ -195,13 +193,13 @@ void CommandHandler::DownLoadFile(const QByteArray& body)
     while (!file.atEnd()) {
         // file.read() 会自动读取指定大小的数据，如果剩余不足 64KB，就全读出来
         QByteArray chunk = file.read(chunkSize);
-        emit sendPacket(NetworkPacket::pack(CmdType::DownLoadFile, chunk));
+        emit sendData(CmdType::DownLoadFile, chunk);
     }
 
     file.close();
 
     // 5. 传输完成，发送一个空包作为结束标志 (对应你原来的 CPacket(4, NULL, 0))
-    emit sendPacket(NetworkPacket::pack(CmdType::DownLoadFile, QByteArray()));
+    emit sendData(CmdType::DownLoadFile, QByteArray());
     emit logMessage("【调试】文件传输完成！");
 }
 
@@ -345,7 +343,7 @@ void CommandHandler::SendScreen()
     }
     */
     // 4. 打包发送 
-    emit sendPacket(NetworkPacket::pack(CmdType::ScreenData, bytes));
+    emit sendData(CmdType::ScreenData, bytes);
 }
 
 void CommandHandler::LockMachine(const QByteArray&)
@@ -355,12 +353,12 @@ void CommandHandler::LockMachine(const QByteArray&)
         m_lockWidget->lock();
         emit logMessage("【调试】机器已锁定");
         payload.append(static_cast<char>(LockResult::LockSuccess));
-        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, payload));
+        emit sendData(CmdType::LockMachine, payload);
     }
     else {
         // 如果已经锁了，就回一个失败或者通知的包
 		payload.append(static_cast<char>(LockResult::LockFailed));
-        emit sendPacket(NetworkPacket::pack(CmdType::LockMachine, payload));
+        emit sendData(CmdType::LockMachine, payload);
     }
 }
 
@@ -368,7 +366,7 @@ void CommandHandler::UnlockMachine(const QByteArray&)
 {
     m_lockWidget->unlock();
     // 发送解锁成功的回执 
-    emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
+    emit sendData(CmdType::UnLockMachine, QByteArray());
     emit logMessage("【调试】机器已解锁");
 }
 
