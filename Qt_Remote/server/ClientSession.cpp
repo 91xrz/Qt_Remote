@@ -1,13 +1,15 @@
 #include "ClientSession.h"
 
 ClientSession::ClientSession(QTcpSocket* socket, QObject* parent)
-    : QObject(parent), m_socket(socket)
+    : QObject(parent), m_socket(socket), m_streamWriter(this)
 {
     if (m_socket) {
         m_socket->setParent(this);
         connect(m_socket, &QTcpSocket::readyRead, this, &ClientSession::onReadyRead);
         connect(m_socket, &QTcpSocket::disconnected, this, &ClientSession::onDisconnected);
     }
+
+    connect(&m_streamWriter, &PacketStreamWriter::writeToSocket, this, &ClientSession::sendRaw);
 }
 
 qint64 ClientSession::sendRaw(const QByteArray& packet)
@@ -21,6 +23,11 @@ qint64 ClientSession::sendRaw(const QByteArray& packet)
     }
 
     return -1;
+}
+
+void ClientSession::enqueueData(CmdType type, const QByteArray& body)
+{
+    m_streamWriter.enqueue(type, body);
 }
 
 QString ClientSession::peerAddress() const

@@ -70,8 +70,8 @@ void DeviceServer::onNewConnection()
         //业务分发
         connect(session, &ClientSession::commandReceived,
             m_cmdHandler, &CommandHandler::onHandlerCommand);
-        connect(m_cmdHandler, &CommandHandler::sendPacket,
-            session, &ClientSession::sendRaw);
+        connect(m_cmdHandler, &CommandHandler::sendData,
+            session, &ClientSession::enqueueData);
         connect(m_cmdHandler, &CommandHandler::logMessage,
 			this, &DeviceServer::logMessage);
 

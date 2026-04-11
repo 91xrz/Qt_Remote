@@ -24,7 +24,7 @@ public:
 		// 如果被控端本地有人按了 Insert 键，也要向主控端发个包通知一下（可选）
 		connect(m_lockWidget, &LockScreenWidget::unlockedLocally, this, [=]() {
 			emit logMessage("【调试】本地用户已通过 Insert 键解锁");
-			emit sendPacket(NetworkPacket::pack(CmdType::UnLockMachine, QByteArray()));
+			emit sendData(CmdType::UnLockMachine, QByteArray());
 			});
 		initCommandMap();
 	}
@@ -38,8 +38,8 @@ public slots:
 
 
 signals:
-	// 定义一个信号，专门用来把打包好的完整二进制流扔给网络层
-	void sendPacket(QByteArray fullPacket);
+	// 定义一个信号，发送命令类型和包体给网络层排队处理
+	void sendData(CmdType type, QByteArray body);
 	void logMessage(QString msg);
 
 public:
@@ -62,4 +62,3 @@ private:
 private:
 	void initCommandMap(); // 初始化路由表
 };
-
