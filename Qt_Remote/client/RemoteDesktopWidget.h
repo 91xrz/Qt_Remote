@@ -1,14 +1,13 @@
 #pragma once
 
-#include <QWidget>
-#include <QPixmap>
 #include <QElapsedTimer>
 #include <QMouseEvent>
-#include <QWheelEvent>
+#include <QPixmap>
 #include <QPushButton>
-#include "NetworkData.h"
+#include <QWheelEvent>
+#include <QWidget>
 
-class RemoteConnection;
+#include "NetworkData.h"
 
 class RemoteDesktopWidget : public QWidget
 {
@@ -17,10 +16,14 @@ class RemoteDesktopWidget : public QWidget
 public:
     explicit RemoteDesktopWidget(QWidget* parent = nullptr);
 
-    void setConnection(RemoteConnection* conn);
-
 public slots:
-    void onScreenDataReceived(const QPixmap& pixmap);
+    void updateFrame(const QPixmap& pixmap);
+
+signals:
+    void sigRequestNextFrame();
+    void sigMouseInputCaptured(MouseEventType eventType, int x, int y, int scrollDelta);
+    void sigLockMachineRequested();
+    void sigUnlockMachineRequested();
 
 protected:
     void paintEvent(QPaintEvent* event) override;
@@ -36,11 +39,8 @@ private:
     void sendMouseEvent(MouseEventType type, const QPoint& localPos, int scrollDelta = 0);
     QRect remoteDisplayRect() const;
     bool isInRemoteDisplay(const QPoint& pos) const;
-    void sendLockMachineCommand();
-    void sendUnlockMachineCommand();
 
 private:
-    RemoteConnection* m_connection = nullptr;
     QPixmap m_currentFrame;
     QElapsedTimer m_mouseTimer;
     QPushButton* m_lockButton = nullptr;

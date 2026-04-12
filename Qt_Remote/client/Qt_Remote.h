@@ -2,29 +2,31 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_Qt_Remote.h"
-#include "RemoteConnection.h"
-#include "ClientCommandHandler.h"
-
-class FileManagerWidget;
-class RemoteDesktopWidget;
 
 #pragma execution_character_set("utf-8")
-// 视图层
+
 class Qt_Remote : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    Qt_Remote(QWidget *parent = nullptr);
+    Qt_Remote(QWidget* parent = nullptr);
     ~Qt_Remote();
+
+public slots:
+    void appendLogMessage(const QString& msg);
+    void onConnected();
+    void onDisconnected();
+    void onConnectionError(const QString& msg);
+    void setConnectingState(const QString& ip, quint16 port);
+
+signals:
+    void sigConnectRequested(const QString& ip, quint16 port);
+    void sigDisconnectRequested();
+    void sigOpenFileManagerRequested();
+    void sigOpenRemoteDesktopRequested();
+    void sigTestRequested();
 
 private:
     Ui::Qt_RemoteClass ui;
-    RemoteConnection* m_connection = nullptr;
-    FileManagerWidget* m_fileManagerWidget = nullptr;
-    RemoteDesktopWidget* m_desktopWidget = nullptr;
-	ClientCommandHandler* m_commandHandler = nullptr;
-
-private slots:
-
 };

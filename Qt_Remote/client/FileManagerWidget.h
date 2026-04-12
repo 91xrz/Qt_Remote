@@ -12,8 +12,6 @@ class QStandardItem;
 class QStandardItemModel;
 class QModelIndex;
 class QPoint;
-class RemoteConnection;
-class ClientCommandHandler;
 
 class FileManagerWidget : public QWidget
 {
@@ -21,23 +19,30 @@ class FileManagerWidget : public QWidget
 
 public:
     explicit FileManagerWidget(QWidget* parent = nullptr);
-    void setConnection(RemoteConnection* conn);
-    void setCommandHandler(ClientCommandHandler* handler);
+
+    void setDirRequestContext(const QString& requestPath, bool requestTree);
+    void showWarning(const QString& title, const QString& message);
+
+signals:
+    void sigRequestDriverInfo();
+    void sigRequestDirInfo(const QString& path, bool forTree);
+    void sigRequestOpenFile(const QString& path);
+    void sigRequestDeleteFile(const QString& path);
+    void sigRequestDownloadFile(const QString& remotePath, const QString& localPath);
 
 public slots:
-    void onDriverInfoReceived(const QStringList& drives);
-    void onDirInfoReceived(const FILEINFO& fileInfo);
+    void updateDriveList(const QStringList& drives);
+    void updateDirList(const FILEINFO& fileInfo);
     void onOpenFileFinished();
     void onDeleteFileFinished();
-    void onDownloadStarted(qint64 totalSize);
-    void onDownloadProgress(qint64 receivedSize, qint64 totalSize);
-    void onDownloadFinished();
+    void showDownloadStarted(qint64 totalSize);
+    void showDownloadProgress(qint64 receivedSize, qint64 totalSize);
+    void showDownloadFinished();
 
 private:
     void setupUi();
     void setupModels();
     void setupConnections();
-    void requestTestDrives();
     void addDummyNode(QStandardItem* parentItem);
     bool hasDummyChild(QStandardItem* parentItem) const;
     void populateChildrenForItem(QStandardItem* parentItem);
@@ -50,8 +55,6 @@ private:
     QTableView* m_tableView;
     QStandardItemModel* m_treeModel;
     QStandardItemModel* m_tableModel;
-    RemoteConnection* m_connection = nullptr;
-    ClientCommandHandler* m_cmdHandler = nullptr;
     QProgressDialog* m_progressDlg = nullptr;
     bool m_isRequestingTree = false;
     QStandardItem* m_expandingItem = nullptr;
