@@ -1,4 +1,4 @@
-#include "ServerWindow.h"
+#include "view/ServerWindow.h"
 
 #include <QDateTime>
 #include <QHBoxLayout>
@@ -9,10 +9,8 @@
 #include <QTextEdit>
 #include <QVBoxLayout>
 
-#include "DeviceServer.h"
-
 ServerWindow::ServerWindow(QWidget* parent)
-    : QWidget(parent), m_server(new DeviceServer(this))
+    : QWidget(parent)
 {
     setWindowTitle(QStringLiteral("Qt Remote Server (基础版)"));
     resize(700, 460);
@@ -44,42 +42,21 @@ ServerWindow::ServerWindow(QWidget* parent)
     mainLayout->addWidget(m_logView, 1);
 
     connect(m_toggleButton, &QPushButton::clicked, this, &ServerWindow::onToggleListenClicked);
-
-    connect(m_server, &DeviceServer::logMessage, this, &ServerWindow::appendLog);
-    connect(m_server, &DeviceServer::statusChanged, this, [this](const QString& status) {
-        m_statusLabel->setText(QStringLiteral("状态: %1").arg(status));
-    });
-
-    connect(m_server, &DeviceServer::clientConnected, this, [this](const QString& ip, quint16 port) {
-        appendLog(QStringLiteral("连接事件: %1:%2").arg(ip).arg(port));
-        refreshStatus();
-    });
-
-    connect(m_server, &DeviceServer::clientDisconnected, this, [this](const QString& ip, quint16 port) {
-        appendLog(QStringLiteral("断开事件: %1:%2").arg(ip).arg(port));
-        refreshStatus();
-    });
-
-    refreshStatus();
 }
 
 void ServerWindow::onToggleListenClicked()
 {
-    if (m_server->isListening()) {
-        m_server->stopListen();
-        refreshStatus();
-        return;
-    }
-
     const quint16 port = static_cast<quint16>(m_portEdit->text().toUShort());
     if (port == 0) {
         appendLog(QStringLiteral("请输入合法端口（1-65535）"));
         return;
     }
+    emit sigToggleListenRequested(port);
+}
 
-    if (m_server->startListen(port)) {
-        refreshStatus();
-    }
+void ServerWindow::updateStatus(const QString& statusText)
+{
+    m_statusLabel->setText(QStringLiteral("状态: %1").arg(statusText));
 }
 
 void ServerWindow::appendLog(const QString& message)
@@ -88,15 +65,19 @@ void ServerWindow::appendLog(const QString& message)
     m_logView->append(QStringLiteral("[%1] %2").arg(timestamp, message));
 }
 
-void ServerWindow::refreshStatus()
+void ServerWindow::updateOnlineCount(int count)
 {
-    if (m_server->isListening()) {
+    m_onlineLabel->setText(QStringLiteral("在线客户端: %1").arg(count));
+}
+
+void ServerWindow::updateListeningState(bool isListening, quint16 port)
+{
+    m_isListening = isListening;
+    if (m_isListening) {
         m_toggleButton->setText(QStringLiteral("停止监听"));
-        m_statusLabel->setText(QStringLiteral("状态: 监听中 (%1)").arg(m_server->listeningPort()));
+        m_statusLabel->setText(QStringLiteral("状态: 监听中 (%1)").arg(port));
     } else {
         m_toggleButton->setText(QStringLiteral("启动监听"));
         m_statusLabel->setText(QStringLiteral("状态: 未监听"));
     }
-
-    m_onlineLabel->setText(QStringLiteral("在线客户端: %1").arg(m_server->sessionCount()));
 }
