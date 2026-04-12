@@ -3,8 +3,6 @@
 #include <QPainter>
 #include <QTimer>
 
-#include "RemoteConnection.h"
-
 RemoteDesktopWidget::RemoteDesktopWidget(QWidget* parent)
     : QWidget(parent)
 {
@@ -21,24 +19,23 @@ RemoteDesktopWidget::RemoteDesktopWidget(QWidget* parent)
     m_lockButton = new QPushButton(QStringLiteral("锁机"), this);
     m_unlockButton = new QPushButton(QStringLiteral("解锁"), this);
 
-    connect(m_lockButton, &QPushButton::clicked, this, &RemoteDesktopWidget::sendLockMachineCommand);
-    connect(m_unlockButton, &QPushButton::clicked, this, &RemoteDesktopWidget::sendUnlockMachineCommand);
+    connect(m_lockButton, &QPushButton::clicked, this, [this]() {
+        emit sigLockMachineRequested();
+    });
+    connect(m_unlockButton, &QPushButton::clicked, this, [this]() {
+        emit sigUnlockMachineRequested();
+    });
 }
 
-void RemoteDesktopWidget::setConnection(RemoteConnection* conn)
-{
-    m_connection = conn;
-}
-
-void RemoteDesktopWidget::onScreenDataReceived(const QPixmap& pixmap)
+void RemoteDesktopWidget::updateFrame(const QPixmap& pixmap)
 {
     m_currentFrame = pixmap;
     update();
 
-    if (m_connection && this->isVisible()) {
+    if (isVisible()) {
         QTimer::singleShot(30, this, [this]() {
-            if (m_connection && this->isVisible()) {
-                m_connection->sendPacket(CmdType::ScreenData);
+            if (isVisible()) {
+                emit sigRequestNextFrame();
             }
         });
     }
@@ -194,7 +191,7 @@ void RemoteDesktopWidget::wheelEvent(QWheelEvent* event)
 
 void RemoteDesktopWidget::sendMouseEvent(MouseEventType type, const QPoint& localPos, int scrollDelta)
 {
-    if (!m_connection || m_currentFrame.isNull()) {
+    if (m_currentFrame.isNull()) {
         return;
     }
 
@@ -212,15 +209,7 @@ void RemoteDesktopWidget::sendMouseEvent(MouseEventType type, const QPoint& loca
     const int mappedX = qBound(0, displayPos.x() * remoteW / localW, remoteW - 1);
     const int mappedY = qBound(0, displayPos.y() * remoteH / localH, remoteH - 1);
 
-    MouseEvent mouseEvent;
-    mouseEvent.eventType = type;
-    mouseEvent.x = mappedX;
-    mouseEvent.y = mappedY;
-    mouseEvent.scrollDelta = scrollDelta;
-
-    QByteArray body;
-    body.append(reinterpret_cast<const char*>(&mouseEvent), sizeof(MouseEvent));
-    m_connection->sendPacket(CmdType::MouseInput, body);
+    emit sigMouseInputCaptured(type, mappedX, mappedY, scrollDelta);
 }
 
 QRect RemoteDesktopWidget::remoteDisplayRect() const
@@ -233,19 +222,4 @@ QRect RemoteDesktopWidget::remoteDisplayRect() const
 bool RemoteDesktopWidget::isInRemoteDisplay(const QPoint& pos) const
 {
     return remoteDisplayRect().contains(pos);
-}
-
-//TODO:解锁和锁机需要互斥使用，后续可以改成一个按钮，点击后根据当前状态发送锁机或解锁命令
-void RemoteDesktopWidget::sendLockMachineCommand()
-{
-    if (m_connection) {
-        m_connection->sendPacket(CmdType::LockMachine);
-    }
-}
-
-void RemoteDesktopWidget::sendUnlockMachineCommand()
-{
-    if (m_connection) {
-        m_connection->sendPacket(CmdType::UnLockMachine);
-    }
 }

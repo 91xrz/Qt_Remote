@@ -1,14 +1,12 @@
 #include "FileManagerWidget.h"
-#include "ClientCommandHandler.h"
-#include "RemoteConnection.h"
 #include "NetworkData.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QDateTime>
 #include <QDebug>
+#include <QFileDialog>
 #include <QHeaderView>
-#include <QStyle>
 #include <QItemSelectionModel>
 #include <QMenu>
 #include <QMessageBox>
@@ -16,13 +14,15 @@
 #include <QSplitter>
 #include <QStandardItem>
 #include <QStandardItemModel>
+#include <QStyle>
 #include <QTableView>
 #include <QTreeView>
 #include <QVBoxLayout>
-#include <QFileDialog>
+
 namespace {
 constexpr auto kDummyText = "Loading...";
 }
+
 static QString formatSize(qint64 bytes)
 {
     double size = bytes;
@@ -36,6 +36,7 @@ static QString formatSize(qint64 bytes)
 
     return QString::number(size, 'f', 2) + " " + units[i];
 }
+
 FileManagerWidget::FileManagerWidget(QWidget* parent)
     : QWidget(parent)
     , m_splitter(nullptr)
@@ -49,14 +50,18 @@ FileManagerWidget::FileManagerWidget(QWidget* parent)
     setupConnections();
 }
 
-void FileManagerWidget::setConnection(RemoteConnection* conn)
+void FileManagerWidget::setDirRequestContext(const QString& requestPath, bool requestTree)
 {
-    m_connection = conn;
+    m_currentRequestPath = requestPath;
+    m_isRequestingTree = requestTree;
+    if (!requestTree) {
+        m_expandingItem = nullptr;
+    }
 }
 
-void FileManagerWidget::setCommandHandler(ClientCommandHandler* handler)
+void FileManagerWidget::showWarning(const QString& title, const QString& message)
 {
-    m_cmdHandler = handler;
+    QMessageBox::warning(this, title, message);
 }
 
 void FileManagerWidget::setupUi()
@@ -101,7 +106,6 @@ void FileManagerWidget::setupConnections()
         }
 
         item->removeRows(0, item->rowCount());
-        qDebug() << "正在向远端请求数据..." << item->text();
         populateChildrenForItem(item);
     });
 
@@ -111,15 +115,6 @@ void FileManagerWidget::setupConnections()
         });
 
     connect(m_tableView, &QWidget::customContextMenuRequested, this, &FileManagerWidget::showFileContextMenu);
-}
-
-void FileManagerWidget::requestTestDrives()
-{
-    if (!m_connection) {
-        qDebug() << "[文件管理] 连接尚未注入，无法请求磁盘信息";
-        return;
-    }
-    m_connection->sendPacket(CmdType::DriverInfo);
 }
 
 void FileManagerWidget::addDummyNode(QStandardItem* parentItem)
@@ -145,15 +140,10 @@ void FileManagerWidget::populateChildrenForItem(QStandardItem* parentItem)
     if (!parentItem) {
         return;
     }
-    if (!m_connection) {
-        qDebug() << "[文件管理] 连接尚未注入，无法展开目录";
-        return;
-    }
 
-    m_isRequestingTree = true;
     m_expandingItem = parentItem;
-    m_currentRequestPath = parentItem->data(Qt::UserRole + 1).toString();
-    m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
+    const QString path = parentItem->data(Qt::UserRole + 1).toString();
+    emit sigRequestDirInfo(path, true);
 }
 
 void FileManagerWidget::showFilesForIndex(const QModelIndex& index)
@@ -162,22 +152,17 @@ void FileManagerWidget::showFilesForIndex(const QModelIndex& index)
     if (!index.isValid()) {
         return;
     }
-    if (!m_connection) {
-        qDebug() << "[文件管理] 连接尚未注入，无法读取目录详情";
-        return;
-    }
 
     QStandardItem* item = m_treeModel->itemFromIndex(index);
     if (!item) {
         return;
     }
 
-    m_isRequestingTree = false;
-    m_currentRequestPath = item->data(Qt::UserRole + 1).toString();
-    m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
+    const QString path = item->data(Qt::UserRole + 1).toString();
+    emit sigRequestDirInfo(path, false);
 }
 
-void FileManagerWidget::onDriverInfoReceived(const QStringList& drives)
+void FileManagerWidget::updateDriveList(const QStringList& drives)
 {
     m_treeModel->removeRows(0, m_treeModel->rowCount());
     const QIcon driveIcon = QApplication::style()->standardIcon(QStyle::SP_DriveHDIcon);
@@ -199,7 +184,7 @@ void FileManagerWidget::onDriverInfoReceived(const QStringList& drives)
     }
 }
 
-void FileManagerWidget::onDirInfoReceived(const FILEINFO& fileInfo)
+void FileManagerWidget::updateDirList(const FILEINFO& fileInfo)
 {
     if (!fileInfo.HasNext) {
         m_expandingItem = nullptr;
@@ -233,7 +218,7 @@ void FileManagerWidget::onDirInfoReceived(const FILEINFO& fileInfo)
     auto* nameItem = new QStandardItem(icon, name);
     nameItem->setData(fullPath, Qt::UserRole + 1);
     row << nameItem;
-    row << new QStandardItem( isDir ? QStringLiteral("--") : formatSize(fileInfo.nFileSize) );
+    row << new QStandardItem(isDir ? QStringLiteral("--") : formatSize(fileInfo.nFileSize));
     row << new QStandardItem(isDir ? QStringLiteral("文件夹") : QStringLiteral("文件"));
     const QString lastModified = fileInfo.nLastModified > 0
         ? QDateTime::fromSecsSinceEpoch(fileInfo.nLastModified).toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"))
@@ -268,41 +253,18 @@ void FileManagerWidget::showFileContextMenu(const QPoint& pos)
     }
 
     if (selectedAction == openAction) {
-        if (!m_connection) {
-            qDebug() << "[文件管理] 连接尚未注入，无法打开:" << fileName;
-            return;
-        }
-        m_connection->sendPacket(CmdType::RunFile, fullPath.toLocal8Bit());
-        qDebug() << "[文件管理] 已发送打开请求:" << fullPath;
+        emit sigRequestOpenFile(fullPath);
     }
     else if (selectedAction == downloadAction) {
-        if (!m_connection || !m_cmdHandler) {
-            QMessageBox::warning(this, QStringLiteral("下载失败"), QStringLiteral("连接或命令处理器未初始化"));
-            return;
-        }
-
         const QString localPath = QFileDialog::getSaveFileName(this, QStringLiteral("保存文件"), fileName);
         if (localPath.isEmpty()) {
             return;
         }
-
-        if (!m_cmdHandler->prepareDownload(localPath)) {
-            QMessageBox::warning(this, QStringLiteral("下载失败"), QStringLiteral("本地文件创建失败，请检查路径权限"));
-            return;
-        }
-
-        m_connection->sendPacket(CmdType::DownLoadFile, fullPath.toLocal8Bit());
-        qDebug() << "[文件管理] 已发送下载请求:" << fullPath << "->" << localPath;
+        emit sigRequestDownloadFile(fullPath, localPath);
     }
     else if (selectedAction == deleteAction) {
-        if (!m_connection) {
-            qDebug() << "[文件管理] 连接尚未注入，无法删除:" << fileName;
-            return;
-        }
-        m_connection->sendPacket(CmdType::DeleFile, fullPath.toLocal8Bit());
-        qDebug() << "[文件管理] 已发送删除请求:" << fullPath;
+        emit sigRequestDeleteFile(fullPath);
     }
-
 }
 
 void FileManagerWidget::onOpenFileFinished()
@@ -312,17 +274,11 @@ void FileManagerWidget::onOpenFileFinished()
 
 void FileManagerWidget::onDeleteFileFinished()
 {
-    qDebug() << "[文件管理] 远端文件已删除，刷新当前目录:" << m_currentRequestPath;
-
-    if (!m_connection || m_currentRequestPath.isEmpty()) {
-        return;
-    }
+    qDebug() << "[文件管理] 远端文件已删除";
     m_tableModel->removeRows(0, m_tableModel->rowCount());
-    m_isRequestingTree = false;
-    m_connection->sendPacket(CmdType::DirInfo, m_currentRequestPath.toLocal8Bit());
 }
 
-void FileManagerWidget::onDownloadStarted(qint64 totalSize)
+void FileManagerWidget::showDownloadStarted(qint64 totalSize)
 {
     if (m_progressDlg) {
         m_progressDlg->deleteLater();
@@ -338,7 +294,7 @@ void FileManagerWidget::onDownloadStarted(qint64 totalSize)
     m_progressDlg->show();
 }
 
-void FileManagerWidget::onDownloadProgress(qint64 receivedSize, qint64 totalSize)
+void FileManagerWidget::showDownloadProgress(qint64 receivedSize, qint64 totalSize)
 {
     if (!m_progressDlg || totalSize <= 0) {
         return;
@@ -347,11 +303,11 @@ void FileManagerWidget::onDownloadProgress(qint64 receivedSize, qint64 totalSize
     const int progress = static_cast<int>((receivedSize * 100) / totalSize);
     m_progressDlg->setValue(qBound(0, progress, 100));
     m_progressDlg->setLabelText(QStringLiteral("已下载: %1 MB / %2 MB")
-        .arg(receivedSize / 1024.0 / 1024.0, 0, 'f', 2)
-        .arg(totalSize / 1024.0 / 1024.0, 0, 'f', 2));
+            .arg(receivedSize / 1024.0 / 1024.0, 0, 'f', 2)
+            .arg(totalSize / 1024.0 / 1024.0, 0, 'f', 2));
 }
 
-void FileManagerWidget::onDownloadFinished()
+void FileManagerWidget::showDownloadFinished()
 {
     if (m_progressDlg) {
         m_progressDlg->setValue(100);

@@ -8,6 +8,12 @@ add_executable(client WIN32
     Qt_Remote.h
     Qt_Remote.ui
     Qt_Remote.qrc
+    MainController.h
+    MainController.cpp
+    FileManagerController.h
+    FileManagerController.cpp
+    RemoteDesktopController.h
+    RemoteDesktopController.cpp
     FileManagerWidget.h
     FileManagerWidget.cpp
     RemoteConnection.h
