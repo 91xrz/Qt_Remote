@@ -6,7 +6,6 @@ class QLineEdit;
 class QPushButton;
 class QTextEdit;
 class QLabel;
-class DeviceServer;
 
 class ServerWindow : public QWidget
 {
@@ -14,10 +13,17 @@ class ServerWindow : public QWidget
 public:
     explicit ServerWindow(QWidget* parent = nullptr);
 
+signals:
+    void sigToggleListenRequested(quint16 port);
+
+public slots:
+    void updateStatus(const QString& statusText);
+    void appendLog(const QString& message);
+    void updateOnlineCount(int count);
+    void updateListeningState(bool isListening, quint16 port);
+
 private slots:
     void onToggleListenClicked();
-    void appendLog(const QString& message);
-    void refreshStatus();
 
 private:
     QLineEdit* m_portEdit = nullptr;
@@ -25,5 +31,5 @@ private:
     QLabel* m_statusLabel = nullptr;
     QLabel* m_onlineLabel = nullptr;
     QTextEdit* m_logView = nullptr;
-    DeviceServer* m_server = nullptr;
+    bool m_isListening = false;
 };

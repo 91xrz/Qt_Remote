@@ -3,7 +3,7 @@
 #include <QObject>
 #include <QTcpServer>
 #include <QList>
-#include "CommandHandler.h"
+#include "NetworkData.h"
 
 class ClientSession;
 
@@ -19,17 +19,24 @@ public:
     quint16 listeningPort() const;
     int sessionCount() const;
 
+public slots:
+    void sendToActiveSession(CmdType type, const QByteArray& body);
+
 signals:
     void logMessage(const QString& msg);
     void clientConnected(const QString& ip, quint16 port);
     void clientDisconnected(const QString& ip, quint16 port);
     void statusChanged(const QString& status);
+    void onlineCountChanged(int count);
+    void commandReceived(CmdType type, const QByteArray& body);
 
 private slots:
     void onNewConnection();
 
 private:
+    void onCommandFromSession(ClientSession* session, CmdType type, const QByteArray& body);
+
     QTcpServer* m_server = nullptr;
     QList<ClientSession*> m_sessions;
-    CommandHandler* m_cmdHandler;
+    ClientSession* m_activeSession = nullptr;
 };
