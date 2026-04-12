@@ -1,8 +1,8 @@
 #include "RemoteDesktopController.h"
 
 #include "ClientCommandHandler.h"
-#include "RemoteConnection.h"
-#include "RemoteDesktopWidget.h"
+#include "core/RemoteConnection.h"
+#include "view/RemoteDesktopWidget.h"
 
 RemoteDesktopController::RemoteDesktopController(RemoteConnection* connection,
     ClientCommandHandler* commandHandler,

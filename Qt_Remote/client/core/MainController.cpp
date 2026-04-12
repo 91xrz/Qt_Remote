@@ -1,10 +1,10 @@
 #include "MainController.h"
 
-#include "ClientCommandHandler.h"
-#include "FileManagerController.h"
-#include "Qt_Remote.h"
-#include "RemoteConnection.h"
-#include "RemoteDesktopController.h"
+#include "controller/ClientCommandHandler.h"
+#include "view/Qt_Remote.h"
+#include "controller/FileManagerController.h"
+#include "controller/RemoteDesktopController.h"
+#include "core/RemoteConnection.h"
 
 MainController::MainController(QObject* parent)
     : QObject(parent)

@@ -1,8 +1,8 @@
 #include "FileManagerController.h"
 
 #include "ClientCommandHandler.h"
-#include "FileManagerWidget.h"
-#include "RemoteConnection.h"
+#include "view/FileManagerWidget.h"
+#include "core/RemoteConnection.h"
 
 #include <QWidget>
 

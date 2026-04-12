@@ -1,4 +1,4 @@
-#include "MainController.h"
+#include "core/MainController.h"
 #include <QtWidgets/QApplication>
 
 int main(int argc, char* argv[])
