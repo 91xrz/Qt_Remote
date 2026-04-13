@@ -1,8 +1,6 @@
 #include "CommandHandler.h"
 #include <windows.h>
 #include <QDateTime>
-#include <QCoreApplication>
-#include <QEventLoop>
 
 CommandHandler::CommandHandler(QObject* parent)
     : QObject(parent)
@@ -200,12 +198,7 @@ void CommandHandler::DownLoadFile(const QByteArray& body)
     while (!file.atEnd()) {
         // file.read() 会自动读取指定大小的数据，如果剩余不足 64KB，就全读出来
         QByteArray chunk = file.read(chunkSize);
-        if (chunk.isEmpty()) {
-            break;
-        }
         emit sendData(CmdType::DownLoadFile, chunk);
-        // 中文注释：每发送一块就让出事件循环，避免文件传输长时间占用导致主通道卡顿
-        QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
     }
 
     file.close();

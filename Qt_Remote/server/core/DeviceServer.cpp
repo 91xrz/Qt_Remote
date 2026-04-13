@@ -71,13 +71,37 @@ void DeviceServer::onNewConnection()
             continue;
         }
 
-        // 中文注释：新连接先进入握手阶段，等待首包决定是主通道还是文件通道
-        m_pendingParsers.insert(socket, PacketStreamParser());
-        connect(socket, &QTcpSocket::readyRead, this, [this, socket]() { onPendingSocketReadyRead(socket); });
-        connect(socket, &QTcpSocket::disconnected, this, [this, socket]() { onPendingSocketDisconnected(socket); });
-        emit logMessage(QStringLiteral("收到待认证连接: %1:%2")
-            .arg(socket->peerAddress().toString())
-            .arg(socket->peerPort()));
+        auto* session = new ClientSession(socket, this);
+        m_sessions.append(session);
+
+        connect(session, &ClientSession::logMessage, this, &DeviceServer::logMessage);
+        connect(session, &ClientSession::commandReceived, this,
+            [this, session](CmdType type, const QByteArray& body) {
+                onCommandFromSession(session, type, body);
+            });
+
+        connect(session, &ClientSession::sessionClosed, this, [this](ClientSession* s) {
+            const QString ip = s->peerAddress();
+            const quint16 port = s->peerPort();
+            m_sessions.removeOne(s);
+            if (m_activeSession == s) {
+                m_activeSession = nullptr;
+            }
+            emit clientDisconnected(ip, port);
+            emit onlineCountChanged(m_sessions.size());
+            emit logMessage(QStringLiteral("客户端断开: %1:%2，当前在线: %3")
+                .arg(ip)
+                .arg(port)
+                .arg(m_sessions.size()));
+            s->deleteLater();
+        });
+
+        emit clientConnected(session->peerAddress(), session->peerPort());
+        emit onlineCountChanged(m_sessions.size());
+        emit logMessage(QStringLiteral("客户端连接: %1:%2，当前在线: %3")
+            .arg(session->peerAddress())
+            .arg(session->peerPort())
+            .arg(m_sessions.size()));
     }
 }
 
@@ -85,114 +109,4 @@ void DeviceServer::onCommandFromSession(ClientSession* session, CmdType type, co
 {
     m_activeSession = session;
     emit commandReceived(type, body);
-}
-
-void DeviceServer::onPendingSocketReadyRead(QTcpSocket* socket)
-{
-    if (!socket || !m_pendingParsers.contains(socket)) {
-        return;
-    }
-
-    auto& parser = m_pendingParsers[socket];
-    const auto parsed = parser.appendAndParse(socket->readAll());
-    for (const auto& result : parsed) {
-        if (!result.valid) {
-            emit logMessage(QStringLiteral("待认证连接收到无效数据包，已忽略"));
-            continue;
-        }
-        handleHandshakePacket(socket, result.packet.type);
-        return;
-    }
-}
-
-void DeviceServer::onPendingSocketDisconnected(QTcpSocket* socket)
-{
-    if (!socket) {
-        return;
-    }
-    m_pendingParsers.remove(socket);
-}
-
-void DeviceServer::bindSessionSignals(ClientSession* session)
-{
-    connect(session, &ClientSession::logMessage, this, &DeviceServer::logMessage);
-    connect(session, &ClientSession::commandReceived, this,
-        [this, session](CmdType type, const QByteArray& body) {
-            onCommandFromSession(session, type, body);
-        });
-
-    connect(session, &ClientSession::sessionClosed, this, [this](ClientSession* s) {
-        const QString ip = s->peerAddress();
-        const quint16 port = s->peerPort();
-        m_sessions.removeOne(s);
-        if (m_activeSession == s) {
-            m_activeSession = nullptr;
-        }
-        emit clientDisconnected(ip, port);
-        emit onlineCountChanged(m_sessions.size());
-        emit logMessage(QStringLiteral("客户端断开: %1:%2，当前在线: %3")
-            .arg(ip)
-            .arg(port)
-            .arg(m_sessions.size()));
-        s->deleteLater();
-    });
-}
-
-void DeviceServer::handleHandshakePacket(QTcpSocket* socket, CmdType type)
-{
-    if (!socket) {
-        return;
-    }
-
-    disconnect(socket, nullptr, this, nullptr);
-    m_pendingParsers.remove(socket);
-
-    if (type == CmdType::AuthMainChannel) {
-        auto* session = new ClientSession(socket, this);
-        bindSessionSignals(session);
-        m_sessions.append(session);
-
-        emit clientConnected(session->peerAddress(), session->peerPort());
-        emit onlineCountChanged(m_sessions.size());
-        emit logMessage(QStringLiteral("主通道认证成功: %1:%2，当前在线: %3")
-            .arg(session->peerAddress())
-            .arg(session->peerPort())
-            .arg(m_sessions.size()));
-        return;
-    }
-
-    if (type == CmdType::AuthFileChannel) {
-        ClientSession* session = findSessionForFileChannel(socket);
-        if (!session) {
-            emit logMessage(QStringLiteral("文件通道认证失败：未找到匹配主通道，连接已关闭"));
-            socket->disconnectFromHost();
-            socket->deleteLater();
-            return;
-        }
-
-        session->bindFileSocket(socket);
-        emit logMessage(QStringLiteral("文件通道绑定成功: %1:%2")
-            .arg(session->peerAddress())
-            .arg(session->peerPort()));
-        return;
-    }
-
-    emit logMessage(QStringLiteral("未知握手类型(%1)，连接已关闭").arg(static_cast<int>(type)));
-    socket->disconnectFromHost();
-    socket->deleteLater();
-}
-
-ClientSession* DeviceServer::findSessionForFileChannel(QTcpSocket* socket) const
-{
-    if (!socket) {
-        return nullptr;
-    }
-
-    const QString peerIp = socket->peerAddress().toString();
-    for (ClientSession* session : m_sessions) {
-        if (session && session->peerAddress() == peerIp && !session->hasFileSocket()) {
-            return session;
-        }
-    }
-    return nullptr;
 }
