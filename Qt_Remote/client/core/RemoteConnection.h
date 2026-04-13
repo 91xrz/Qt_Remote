@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <QNetworkProxy>
+#include <QString>
 #include "NetworkData.h"
 #include "PacketStreamParser.h"
 
@@ -33,10 +34,20 @@ signals:
     void commandReceived(CmdType type, const QByteArray& data);
 
 private slots:
-    void onReadyRead();
-    void onSocketError(QAbstractSocket::SocketError socketError);
+    void onMainConnected();
+    void onFileConnected();
+    void onMainReadyRead();
+    void onFileReadyRead();
+    void onMainSocketError(QAbstractSocket::SocketError socketError);
+    void onFileSocketError(QAbstractSocket::SocketError socketError);
 
 private:
-    QTcpSocket* m_socket = nullptr;
-    PacketStreamParser m_streamParser; // 直接复用 common 里的粘包解析器
+    void sendAuthPacket(QTcpSocket* socket, SocketRole role);
+    void processIncomingData(QTcpSocket* socket, PacketStreamParser& parser);
+
+    QString m_machineId;
+    QTcpSocket* m_mainSocket = nullptr;
+    QTcpSocket* m_fileSocket = nullptr;
+    PacketStreamParser m_mainParser;
+    PacketStreamParser m_fileParser;
 };
