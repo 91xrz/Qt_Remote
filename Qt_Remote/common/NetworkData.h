@@ -17,7 +17,22 @@ enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     ScreenData = 20,
     LockMachine=30,
     UnLockMachine=31,
+    AuthConnection = 99,
 }; //业务命令类型
+
+enum class SocketRole : uint8_t {
+    Main = 0,
+    FileTransfer = 1
+};
+
+struct AuthEvent {
+    char machineId[64];
+    SocketRole role;
+
+    AuthEvent() : role(SocketRole::Main) {
+        memset(machineId, 0, sizeof(machineId));
+    }
+};
 
 
 //鼠标事件

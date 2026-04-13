@@ -2,39 +2,59 @@
 
 #include <QMetaObject>
 #include <QThread>
+#include <QUuid>
+#include <cstring>
 
 RemoteConnection::RemoteConnection(QObject* parent)
-    : QObject(parent), m_socket(new QTcpSocket(this))
+    : QObject(parent)
+    , m_machineId(QUuid::createUuid().toString(QUuid::WithoutBraces))
+    , m_mainSocket(new QTcpSocket(this))
+    , m_fileSocket(new QTcpSocket(this))
 {
-    // 绑定 Qt 的 Socket 信号
-    connect(m_socket, &QTcpSocket::connected, this, &RemoteConnection::connected);
-    connect(m_socket, &QTcpSocket::disconnected, this, &RemoteConnection::disconnected);
-    connect(m_socket, &QTcpSocket::readyRead, this, &RemoteConnection::onReadyRead);
-    connect(m_socket, &QTcpSocket::errorOccurred, this, &RemoteConnection::onSocketError);
+    connect(m_mainSocket, &QTcpSocket::connected, this, &RemoteConnection::onMainConnected);
+    connect(m_mainSocket, &QTcpSocket::disconnected, this, &RemoteConnection::disconnected);
+    connect(m_mainSocket, &QTcpSocket::readyRead, this, &RemoteConnection::onMainReadyRead);
+    connect(m_mainSocket, &QTcpSocket::errorOccurred, this, &RemoteConnection::onMainSocketError);
+
+    connect(m_fileSocket, &QTcpSocket::connected, this, &RemoteConnection::onFileConnected);
+    connect(m_fileSocket, &QTcpSocket::readyRead, this, &RemoteConnection::onFileReadyRead);
+    connect(m_fileSocket, &QTcpSocket::errorOccurred, this, &RemoteConnection::onFileSocketError);
 }
 
 void RemoteConnection::connectToServer(const QString& ip, quint16 port)
 {
-    if (m_socket->state() == QAbstractSocket::ConnectedState) {
+    if (m_mainSocket->state() == QAbstractSocket::ConnectedState
+        || m_fileSocket->state() == QAbstractSocket::ConnectedState) {
         emit logMessage(QStringLiteral("已处于连接状态，无需重复连接"));
         return;
     }
-    if (m_socket->state() == QAbstractSocket::ConnectingState) {
+    if (m_mainSocket->state() == QAbstractSocket::ConnectingState
+        || m_fileSocket->state() == QAbstractSocket::ConnectingState) {
         emit logMessage(QStringLiteral("正在连接中，请稍候..."));
         return;
     }
 
-    m_socket->setProxy(QNetworkProxy::NoProxy);
+    m_mainSocket->setProxy(QNetworkProxy::NoProxy);
+    m_fileSocket->setProxy(QNetworkProxy::NoProxy);
 
     emit logMessage(QString("正在连接到 %1:%2 ...").arg(ip).arg(port));
-    m_socket->connectToHost(ip, port);
+    m_mainSocket->connectToHost(ip, port);
+    m_fileSocket->connectToHost(ip, port);
 }
 
 void RemoteConnection::disconnectFromServer()
 {
-    if (m_socket->state() == QAbstractSocket::ConnectedState) {
+    const bool hasConnectedSocket =
+        m_mainSocket->state() == QAbstractSocket::ConnectedState
+        || m_fileSocket->state() == QAbstractSocket::ConnectedState;
+    if (hasConnectedSocket) {
         emit logMessage(QStringLiteral("正在断开连接..."));
-        m_socket->disconnectFromHost();
+        if (m_mainSocket->state() == QAbstractSocket::ConnectedState) {
+            m_mainSocket->disconnectFromHost();
+        }
+        if (m_fileSocket->state() == QAbstractSocket::ConnectedState) {
+            m_fileSocket->disconnectFromHost();
+        }
         return;
     }
     emit logMessage(QStringLiteral("当前未连接，无需断开"));
@@ -42,7 +62,7 @@ void RemoteConnection::disconnectFromServer()
 
 bool RemoteConnection::isConnected() const
 {
-    return m_socket->state() == QAbstractSocket::ConnectedState;
+    return m_mainSocket->state() == QAbstractSocket::ConnectedState;
 }
 
 void RemoteConnection::sendPacket(CmdType type, const QByteArray& body)
@@ -52,36 +72,70 @@ void RemoteConnection::sendPacket(CmdType type, const QByteArray& body)
         return;
     }
 
-    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) {
+    QTcpSocket* targetSocket = (type == CmdType::DownLoadFile) ? m_fileSocket : m_mainSocket;
+    if (!targetSocket || targetSocket->state() != QAbstractSocket::ConnectedState) {
         emit logMessage("【错误】未连接到被控端，无法发送指令！");
         return;
     }
 
-    // 复用 common 里的 NetworkPacket 打包工具
     const QByteArray packet = NetworkPacket::pack(type, body);
-    m_socket->write(packet);
+    targetSocket->write(packet);
 }
 
-void RemoteConnection::onReadyRead()
+void RemoteConnection::onMainConnected()
 {
-    // 复用 common 里的粘包解析器
-    const auto parsed = m_streamParser.appendAndParse(m_socket->readAll());
+    emit connected();
+    sendAuthPacket(m_mainSocket, SocketRole::Main);
+}
 
-    
-    //TODO:需要在界面写相应的处理
+void RemoteConnection::onFileConnected()
+{
+    sendAuthPacket(m_fileSocket, SocketRole::FileTransfer);
+}
+
+void RemoteConnection::onMainReadyRead()
+{
+    processIncomingData(m_mainSocket, m_mainParser);
+}
+
+void RemoteConnection::onFileReadyRead()
+{
+    processIncomingData(m_fileSocket, m_fileParser);
+}
+
+void RemoteConnection::onMainSocketError(QAbstractSocket::SocketError /*socketError*/)
+{
+    emit logMessage(QStringLiteral("主通道 Socket错误：%1").arg(m_mainSocket->errorString()));
+    emit errorOccurred(m_mainSocket->errorString());
+}
+
+void RemoteConnection::onFileSocketError(QAbstractSocket::SocketError /*socketError*/)
+{
+    emit logMessage(QStringLiteral("文件通道 Socket错误：%1").arg(m_fileSocket->errorString()));
+}
+
+void RemoteConnection::sendAuthPacket(QTcpSocket* socket, SocketRole role)
+{
+    if (!socket || socket->state() != QAbstractSocket::ConnectedState) {
+        return;
+    }
+
+    AuthEvent authEvent;
+    std::strncpy(authEvent.machineId, m_machineId.toUtf8().constData(), sizeof(authEvent.machineId) - 1);
+    authEvent.role = role;
+
+    QByteArray body(reinterpret_cast<const char*>(&authEvent), sizeof(AuthEvent));
+    socket->write(NetworkPacket::pack(CmdType::AuthConnection, body));
+}
+
+void RemoteConnection::processIncomingData(QTcpSocket* socket, PacketStreamParser& parser)
+{
+    const auto parsed = parser.appendAndParse(socket->readAll());
     for (const auto& result : parsed) {
         if (result.valid) {
-            // 解析成功，抛给外层 UI 业务去处理
             emit commandReceived(result.packet.type, result.packet.body);
-        }
-        else {
+        } else {
             emit logMessage("【警告】收到无效数据包（校验失败），已丢弃");
         }
     }
-}
-
-void RemoteConnection::onSocketError(QAbstractSocket::SocketError /*socketError*/)
-{
-    emit logMessage(QStringLiteral("Socket错误：%1").arg(m_socket->errorString()));
-    emit errorOccurred(m_socket->errorString());
 }

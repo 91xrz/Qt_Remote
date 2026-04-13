@@ -1,7 +1,10 @@
 #include "core/DeviceServer.h"
 
 #include <QTcpSocket>
+#include <cstring>
+#include <memory>
 #include "core/ClientSession.h"
+#include "PacketStreamParser.h"
 
 DeviceServer::DeviceServer(QObject* parent)
     : QObject(parent), m_server(new QTcpServer(this))
@@ -71,37 +74,84 @@ void DeviceServer::onNewConnection()
             continue;
         }
 
-        auto* session = new ClientSession(socket, this);
-        m_sessions.append(session);
+        auto parser = std::make_shared<PacketStreamParser>();
+        auto readyConn = std::make_shared<QMetaObject::Connection>();
 
-        connect(session, &ClientSession::logMessage, this, &DeviceServer::logMessage);
-        connect(session, &ClientSession::commandReceived, this,
-            [this, session](CmdType type, const QByteArray& body) {
-                onCommandFromSession(session, type, body);
-            });
-
-        connect(session, &ClientSession::sessionClosed, this, [this](ClientSession* s) {
-            const QString ip = s->peerAddress();
-            const quint16 port = s->peerPort();
-            m_sessions.removeOne(s);
-            if (m_activeSession == s) {
-                m_activeSession = nullptr;
+        *readyConn = connect(socket, &QTcpSocket::readyRead, this, [this, socket, parser, readyConn]() {
+            const auto parsedPackets = parser->appendAndParse(socket->readAll());
+            if (parsedPackets.isEmpty()) {
+                return;
             }
-            emit clientDisconnected(ip, port);
-            emit onlineCountChanged(m_sessions.size());
-            emit logMessage(QStringLiteral("客户端断开: %1:%2，当前在线: %3")
-                .arg(ip)
-                .arg(port)
-                .arg(m_sessions.size()));
-            s->deleteLater();
-        });
 
-        emit clientConnected(session->peerAddress(), session->peerPort());
-        emit onlineCountChanged(m_sessions.size());
-        emit logMessage(QStringLiteral("客户端连接: %1:%2，当前在线: %3")
-            .arg(session->peerAddress())
-            .arg(session->peerPort())
-            .arg(m_sessions.size()));
+            const auto& firstPacket = parsedPackets.first();
+            if (!firstPacket.valid || firstPacket.packet.type != CmdType::AuthConnection) {
+                emit logMessage(QStringLiteral("拒绝未鉴权连接: %1:%2")
+                    .arg(socket->peerAddress().toString())
+                    .arg(socket->peerPort()));
+                socket->disconnectFromHost();
+                return;
+            }
+
+            const QByteArray& authBody = firstPacket.packet.body;
+            if (authBody.size() < static_cast<int>(sizeof(AuthEvent))) {
+                emit logMessage(QStringLiteral("鉴权数据长度错误，断开连接: %1:%2")
+                    .arg(socket->peerAddress().toString())
+                    .arg(socket->peerPort()));
+                socket->disconnectFromHost();
+                return;
+            }
+
+            AuthEvent authEvent;
+            std::memcpy(&authEvent, authBody.constData(), sizeof(AuthEvent));
+            const QByteArray machineBytes(authEvent.machineId, strnlen(authEvent.machineId, sizeof(authEvent.machineId)));
+            const QString machineId = QString::fromUtf8(machineBytes).trimmed();
+
+            if (machineId.isEmpty()) {
+                emit logMessage(QStringLiteral("空 machineId，断开连接: %1:%2")
+                    .arg(socket->peerAddress().toString())
+                    .arg(socket->peerPort()));
+                socket->disconnectFromHost();
+                return;
+            }
+
+            ClientSession* session = m_sessions.value(machineId, nullptr);
+            if (!session) {
+                session = new ClientSession(machineId, this);
+                m_sessions.insert(machineId, session);
+
+                connect(session, &ClientSession::logMessage, this, &DeviceServer::logMessage);
+                connect(session, &ClientSession::commandReceived, this,
+                    [this, session](CmdType type, const QByteArray& body) {
+                        onCommandFromSession(session, type, body);
+                    });
+                connect(session, &ClientSession::sessionClosed, this, &DeviceServer::handleSessionClosed);
+
+                emit clientConnected(socket->peerAddress().toString(), socket->peerPort());
+                emit onlineCountChanged(m_sessions.size());
+                emit logMessage(QStringLiteral("客户端已注册 machineId=%1, 地址=%2:%3，当前在线: %4")
+                    .arg(machineId)
+                    .arg(socket->peerAddress().toString())
+                    .arg(socket->peerPort())
+                    .arg(m_sessions.size()));
+            }
+
+            if (authEvent.role == SocketRole::Main) {
+                session->bindMainSocket(socket);
+            } else if (authEvent.role == SocketRole::FileTransfer) {
+                session->bindFileSocket(socket);
+            } else {
+                emit logMessage(QStringLiteral("未知 SocketRole，断开连接: %1:%2")
+                    .arg(socket->peerAddress().toString())
+                    .arg(socket->peerPort()));
+                socket->disconnectFromHost();
+                return;
+            }
+
+            disconnect(*readyConn);
+            emit logMessage(QStringLiteral("鉴权成功 machineId=%1, role=%2")
+                .arg(machineId)
+                .arg(static_cast<int>(authEvent.role)));
+        });
     }
 }
 
@@ -109,4 +159,24 @@ void DeviceServer::onCommandFromSession(ClientSession* session, CmdType type, co
 {
     m_activeSession = session;
     emit commandReceived(type, body);
+}
+
+void DeviceServer::handleSessionClosed(ClientSession* session)
+{
+    const QString ip = session->peerAddress();
+    const quint16 port = session->peerPort();
+    const QString machineId = session->machineId();
+    m_sessions.remove(machineId);
+    if (m_activeSession == session) {
+        m_activeSession = nullptr;
+    }
+
+    emit clientDisconnected(ip, port);
+    emit onlineCountChanged(m_sessions.size());
+    emit logMessage(QStringLiteral("客户端断开 machineId=%1, 地址=%2:%3，当前在线: %4")
+        .arg(machineId)
+        .arg(ip)
+        .arg(port)
+        .arg(m_sessions.size()));
+    session->deleteLater();
 }

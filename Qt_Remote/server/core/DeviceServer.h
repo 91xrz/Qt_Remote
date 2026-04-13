@@ -2,7 +2,7 @@
 
 #include <QObject>
 #include <QTcpServer>
-#include <QList>
+#include <QHash>
 #include "NetworkData.h"
 
 class ClientSession;
@@ -35,8 +35,9 @@ private slots:
 
 private:
     void onCommandFromSession(ClientSession* session, CmdType type, const QByteArray& body);
+    void handleSessionClosed(ClientSession* session);
 
     QTcpServer* m_server = nullptr;
-    QList<ClientSession*> m_sessions;
+    QHash<QString, ClientSession*> m_sessions;
     ClientSession* m_activeSession = nullptr;
 };
