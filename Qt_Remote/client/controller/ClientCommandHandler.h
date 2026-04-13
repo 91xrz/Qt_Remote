@@ -9,6 +9,7 @@ class ClientCommandHandler : public QObject
 public:
     explicit ClientCommandHandler(QObject* parent = nullptr);
     bool prepareDownload(const QString& localPath);
+    void cancelLocalDownload();
 
 private:
     using ActionFunc = std::function<void(const QByteArray&)>;
@@ -44,6 +45,7 @@ signals:
     void sigDownloadStarted(qint64 totalSize);
     void sigDownloadProgress(qint64 receivedSize, qint64 totalSize);
     void sigDownloadFinished();
+    void sigRequestDownloadNextChunk();
 
 private:
     QFile m_downloadFile;

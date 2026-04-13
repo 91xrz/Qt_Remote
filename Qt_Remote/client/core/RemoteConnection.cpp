@@ -72,7 +72,10 @@ void RemoteConnection::sendPacket(CmdType type, const QByteArray& body)
         return;
     }
 
-    QTcpSocket* targetSocket = (type == CmdType::DownLoadFile) ? m_fileSocket : m_mainSocket;
+    const bool isDownloadCommand = (type == CmdType::DownLoadFile
+        || type == CmdType::DownloadNextChunk
+        || type == CmdType::CancelDownload);
+    QTcpSocket* targetSocket = isDownloadCommand ? m_fileSocket : m_mainSocket;
     if (!targetSocket || targetSocket->state() != QAbstractSocket::ConnectedState) {
         emit logMessage("【错误】未连接到被控端，无法发送指令！");
         return;

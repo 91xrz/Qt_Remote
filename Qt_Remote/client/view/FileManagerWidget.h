@@ -29,6 +29,7 @@ signals:
     void sigRequestOpenFile(const QString& path);
     void sigRequestDeleteFile(const QString& path);
     void sigRequestDownloadFile(const QString& remotePath, const QString& localPath);
+    void sigCancelDownload();
 
 public slots:
     void updateDriveList(const QStringList& drives);

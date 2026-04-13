@@ -24,6 +24,22 @@ bool ClientCommandHandler::prepareDownload(const QString& localPath)
     return true;
 }
 
+void ClientCommandHandler::cancelLocalDownload()
+{
+    const QString localPath = m_downloadFile.fileName();
+    if (m_downloadFile.isOpen()) {
+        m_downloadFile.close();
+    }
+    if (!localPath.isEmpty()) {
+        QFile::remove(localPath);
+    }
+
+    m_expectedSize = 0;
+    m_receivedSize = 0;
+    m_isDownloading = false;
+    emit sigLogMessage(QStringLiteral("[文件下载] 本地下载已取消，已清理未完成文件"));
+}
+
 void ClientCommandHandler::initCommandMap()
 {
     m_commandMap[CmdType::DriverInfo] = [this](const QByteArray& body) {
@@ -73,6 +89,9 @@ void ClientCommandHandler::initCommandMap()
     m_commandMap[CmdType::DownLoadFile] = [this](const QByteArray& body) {
         handleDownloadFile(body);
         };
+    m_commandMap[CmdType::DownloadNextChunk] = [this](const QByteArray& body) {
+        handleDownloadFile(body);
+        };
 }
 
 void ClientCommandHandler::handleDownloadFile(const QByteArray& body)
@@ -98,6 +117,7 @@ void ClientCommandHandler::handleDownloadFile(const QByteArray& body)
         m_isDownloading = true;
         emit sigDownloadStarted(m_expectedSize);
         emit sigLogMessage(QStringLiteral("[文件下载] 开始下载，总大小: %1 字节").arg(m_expectedSize));
+        emit sigRequestDownloadNextChunk();
         return;
     }
 
@@ -121,13 +141,13 @@ void ClientCommandHandler::handleDownloadFile(const QByteArray& body)
         const qint64 written = m_downloadFile.write(body);
         if (written < 0) {
             emit sigLogMessage(QStringLiteral("[文件下载] 写入本地文件失败"));
-            m_isDownloading = false;
-            m_downloadFile.close();
+            cancelLocalDownload();
             return;
         }
 
         m_receivedSize += written;
         emit sigDownloadProgress(m_receivedSize, m_expectedSize);
+        emit sigRequestDownloadNextChunk();
     }
 }
 
