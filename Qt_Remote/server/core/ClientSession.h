@@ -4,7 +4,6 @@
 #include <QTcpSocket>
 #include "NetworkData.h"
 #include "PacketStreamParser.h"
-#include "PacketStreamWriter.h"
 
 class ClientSession : public QObject
 {
@@ -16,7 +15,7 @@ public:
     quint16 peerPort() const;
 
 public slots:
-    void enqueueData(CmdType type, const QByteArray& body);
+    void sendPacket(CmdType type, const QByteArray& body);
 
 signals:
     void commandReceived(CmdType cmdType, const QByteArray& data);
@@ -30,5 +29,4 @@ private slots:
 private:
     QTcpSocket* m_socket = nullptr;
     PacketStreamParser m_streamParser;
-    PacketStreamWriter m_streamWriter;
 };
