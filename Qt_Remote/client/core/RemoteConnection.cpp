@@ -1,5 +1,8 @@
 #include "RemoteConnection.h"
 
+#include <QMetaObject>
+#include <QThread>
+
 RemoteConnection::RemoteConnection(QObject* parent)
     : QObject(parent), m_socket(new QTcpSocket(this))
 {
@@ -44,13 +47,18 @@ bool RemoteConnection::isConnected() const
 
 void RemoteConnection::sendPacket(CmdType type, const QByteArray& body)
 {
-    if (!isConnected()) {
+    if (QThread::currentThread() != this->thread()) {
+        QMetaObject::invokeMethod(this, [this, type, body]() { sendPacket(type, body); }, Qt::QueuedConnection);
+        return;
+    }
+
+    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) {
         emit logMessage("【错误】未连接到被控端，无法发送指令！");
         return;
     }
 
     // 复用 common 里的 NetworkPacket 打包工具
-    QByteArray packet = NetworkPacket::pack(type, body);
+    const QByteArray packet = NetworkPacket::pack(type, body);
     m_socket->write(packet);
 }
 

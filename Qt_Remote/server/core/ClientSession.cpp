@@ -1,7 +1,10 @@
 #include "ClientSession.h"
 
+#include <QMetaObject>
+#include <QThread>
+
 ClientSession::ClientSession(QTcpSocket* socket, QObject* parent)
-    : QObject(parent), m_socket(socket), m_streamWriter(this)
+    : QObject(parent), m_socket(socket)
 {
     if (m_socket) {
         m_socket->setParent(this);
@@ -9,7 +12,6 @@ ClientSession::ClientSession(QTcpSocket* socket, QObject* parent)
         connect(m_socket, &QTcpSocket::disconnected, this, &ClientSession::onDisconnected);
     }
 
-    connect(&m_streamWriter, &PacketStreamWriter::writeToSocket, this, &ClientSession::sendRaw);
 }
 
 qint64 ClientSession::sendRaw(const QByteArray& packet)
@@ -25,9 +27,19 @@ qint64 ClientSession::sendRaw(const QByteArray& packet)
     return -1;
 }
 
-void ClientSession::enqueueData(CmdType type, const QByteArray& body)
+void ClientSession::sendPacket(CmdType type, const QByteArray& body)
 {
-    m_streamWriter.enqueue(type, body);
+    if (QThread::currentThread() != this->thread()) {
+        QMetaObject::invokeMethod(this, [this, type, body]() { sendPacket(type, body); }, Qt::QueuedConnection);
+        return;
+    }
+
+    if (!m_socket || m_socket->state() != QAbstractSocket::ConnectedState) {
+        return;
+    }
+
+    const QByteArray packet = NetworkPacket::pack(type, body);
+    m_socket->write(packet);
 }
 
 QString ClientSession::peerAddress() const

@@ -60,7 +60,7 @@ void DeviceServer::sendToActiveSession(CmdType type, const QByteArray& body)
         emit logMessage(QStringLiteral("无可用会话，忽略发送: %1").arg(static_cast<int>(type)));
         return;
     }
-    m_activeSession->enqueueData(type, body);
+    m_activeSession->sendPacket(type, body);
 }
 
 void DeviceServer::onNewConnection()
