@@ -6,6 +6,8 @@
 
 enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     None = 0,
+    AuthMainChannel = 100,
+    AuthFileChannel = 101,
     DriverInfo = 1,
     DirInfo = 2,
     RunFile = 3,
