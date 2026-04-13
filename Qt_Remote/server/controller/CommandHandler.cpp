@@ -172,10 +172,13 @@ void CommandHandler::DownLoadFile(const QByteArray& body)
     QString strPath = QString::fromLocal8Bit(body);
     emit logMessage(QString("【调试】准备传输文件: %1").arg(strPath));
 
-    QFile file(strPath);
+    if (m_currentDownloadFile.isOpen()) {
+        m_currentDownloadFile.close();
+    }
+    m_currentDownloadFile.setFileName(strPath);
 
     // 2. 尝试打开文件 (只读模式)
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (!m_currentDownloadFile.open(QIODevice::ReadOnly)) {
         emit logMessage("【调试】文件打开失败，可能不存在或被占用！");
         // 文件打开失败，发送一个大小为 0 的包头回去
         qint64 zeroSize = 0;
@@ -185,27 +188,36 @@ void CommandHandler::DownLoadFile(const QByteArray& body)
     }
 
     // 3. 获取文件大小并发送包头 (对应你原来的发送 8 字节文件大小)
-    qint64 fileSize = file.size();
+    qint64 fileSize = m_currentDownloadFile.size();
     QByteArray headerBody(reinterpret_cast<const char*>(&fileSize), sizeof(qint64));
     emit sendData(CmdType::DownLoadFile, headerBody);
-    emit logMessage(QString("【调试】文件大小: %1 字节，开始传输...").arg(fileSize));
+    emit logMessage(QString("【调试】文件大小: %1 字节，等待客户端 ACK 拉取数据").arg(fileSize));
+}
 
-    // 4. 分块读取并发送
-    // 优化：原来是 1024 字节，这里改为 64KB (65536)，提升传输速度
-    const qint64 chunkSize = 65536;
-
-    // file.atEnd() 用来判断是否读到了文件末尾
-    while (!file.atEnd()) {
-        // file.read() 会自动读取指定大小的数据，如果剩余不足 64KB，就全读出来
-        QByteArray chunk = file.read(chunkSize);
-        emit sendData(CmdType::DownLoadFile, chunk);
+void CommandHandler::HandleDownloadNextChunk(const QByteArray&)
+{
+    if (!m_currentDownloadFile.isOpen()) {
+        emit sendData(CmdType::DownloadNextChunk, QByteArray());
+        return;
     }
 
-    file.close();
+    if (m_currentDownloadFile.atEnd()) {
+        m_currentDownloadFile.close();
+        emit sendData(CmdType::DownloadNextChunk, QByteArray());
+        emit logMessage("【调试】文件传输完成！");
+        return;
+    }
 
-    // 5. 传输完成，发送一个空包作为结束标志 (对应你原来的 CPacket(4, NULL, 0))
-    emit sendData(CmdType::DownLoadFile, QByteArray());
-    emit logMessage("【调试】文件传输完成！");
+    const QByteArray chunk = m_currentDownloadFile.read(65536);
+    emit sendData(CmdType::DownloadNextChunk, chunk);
+}
+
+void CommandHandler::HandleCancelDownload(const QByteArray&)
+{
+    if (m_currentDownloadFile.isOpen()) {
+        m_currentDownloadFile.close();
+        emit logMessage("【调试】客户端已取消下载，服务端传输中断");
+    }
 }
 
 
@@ -394,6 +406,8 @@ void CommandHandler::initCommandMap()
     m_commandMap[CmdType::RunFile] = [this](const QByteArray& body) { RunFile(body); };
     m_commandMap[CmdType::DeleFile] = [this](const QByteArray& body) { DeleFile(body); };
     m_commandMap[CmdType::DownLoadFile] = [this](const QByteArray& body) { DownLoadFile(body); };
+    m_commandMap[CmdType::DownloadNextChunk] = [this](const QByteArray& body) { HandleDownloadNextChunk(body); };
+    m_commandMap[CmdType::CancelDownload] = [this](const QByteArray& body) { HandleCancelDownload(body); };
     m_commandMap[CmdType::MouseInput] = [this](const QByteArray& body) { HandleMouseEvent(body); };
     m_commandMap[CmdType::KeyboardInput] = [this](const QByteArray& body) { HandleKeyboardEvent(body); };
     m_commandMap[CmdType::ScreenData] = [this](const QByteArray&) { SendScreen(); };

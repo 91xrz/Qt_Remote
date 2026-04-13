@@ -50,6 +50,10 @@ void FileManagerController::setupConnections()
             }
             m_connection->sendPacket(CmdType::DownLoadFile, remotePath.toLocal8Bit());
         });
+    connect(m_widget, &FileManagerWidget::sigCancelDownload, this, [this]() {
+        m_commandHandler->cancelLocalDownload();
+        m_connection->sendPacket(CmdType::CancelDownload);
+    });
 
     connect(m_commandHandler, &ClientCommandHandler::sigDriverInfoReceived,
         m_widget, &FileManagerWidget::updateDriveList);
@@ -70,6 +74,9 @@ void FileManagerController::setupConnections()
         m_widget, &FileManagerWidget::showDownloadProgress);
     connect(m_commandHandler, &ClientCommandHandler::sigDownloadFinished,
         m_widget, &FileManagerWidget::showDownloadFinished);
+    connect(m_commandHandler, &ClientCommandHandler::sigRequestDownloadNextChunk, this, [this]() {
+        m_connection->sendPacket(CmdType::DownloadNextChunk);
+    });
 }
 
 void FileManagerController::show()

@@ -36,6 +36,8 @@ public:
     void RunFile(const QByteArray& body);
     void DeleFile(const QByteArray& body);
     void DownLoadFile(const QByteArray& body);
+    void HandleDownloadNextChunk(const QByteArray& body);
+    void HandleCancelDownload(const QByteArray& body);
     void HandleMouseEvent(const QByteArray& body);
     void HandleKeyboardEvent(const QByteArray& body);
     void SendScreen();
@@ -44,6 +46,7 @@ public:
 
 private:
     QHash<CmdType, ActionFunc> m_commandMap;
+    QFile m_currentDownloadFile;
 
     void initCommandMap();
 };

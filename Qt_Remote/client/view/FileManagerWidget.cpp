@@ -287,10 +287,13 @@ void FileManagerWidget::showDownloadStarted(qint64 totalSize)
 
     m_progressDlg = new QProgressDialog(QStringLiteral("准备下载..."), QString(), 0, 100, this);
     m_progressDlg->setWindowModality(Qt::WindowModal);
-    m_progressDlg->setCancelButton(nullptr);
+    m_progressDlg->setCancelButtonText(QStringLiteral("取消下载"));
     m_progressDlg->setMinimumDuration(0);
     m_progressDlg->setValue(0);
     m_progressDlg->setLabelText(QStringLiteral("文件总大小: %1 MB").arg(totalSize / 1024.0 / 1024.0, 0, 'f', 2));
+    connect(m_progressDlg, &QProgressDialog::canceled, this, [this]() {
+        emit sigCancelDownload();
+    });
     m_progressDlg->show();
 }
 

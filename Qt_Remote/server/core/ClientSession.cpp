@@ -107,6 +107,8 @@ bool ClientSession::isFileCommand(CmdType type)
 {
     return type == CmdType::DirInfo
         || type == CmdType::DownLoadFile
+        || type == CmdType::DownloadNextChunk
+        || type == CmdType::CancelDownload
         || type == CmdType::RunFile
         || type == CmdType::DeleFile;
 }

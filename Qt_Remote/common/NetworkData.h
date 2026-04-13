@@ -12,6 +12,8 @@ enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     RunFile = 3,
     DeleFile =4,
     DownLoadFile=5,
+    DownloadNextChunk = 6,
+    CancelDownload = 7,
     MouseInput = 10,
     KeyboardInput = 11,
     ScreenData = 20,
