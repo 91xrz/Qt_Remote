@@ -315,6 +315,29 @@ void CommandHandler::HandleMouseEvent(const QByteArray& body)
     // 否则会造成网络严重拥堵，所以你之前的注释掉发包逻辑是非常正确的。
 }
 
+void CommandHandler::HandleKeyboardEvent(const QByteArray& body)
+{
+    if (body.size() != sizeof(KeyEvent)) {
+        emit logMessage("【调试】键盘事件解析错误：包大小不匹配！");
+        return;
+    }
+
+    KeyEvent keyEvent;
+    memcpy(&keyEvent, body.constData(), sizeof(KeyEvent));
+
+    if (keyEvent.eventType != KeyEventType::Press
+        && keyEvent.eventType != KeyEventType::Release) {
+        return;
+    }
+
+    INPUT input = {};
+    input.type = INPUT_KEYBOARD;
+    input.ki.wVk = static_cast<WORD>(keyEvent.vkCode);
+    input.ki.dwFlags = (keyEvent.eventType == KeyEventType::Release) ? KEYEVENTF_KEYUP : 0;
+
+    SendInput(1, &input, sizeof(INPUT));
+}
+
 void CommandHandler::SendScreen()
 {
     // 1. 获取系统主屏幕
@@ -372,6 +395,7 @@ void CommandHandler::initCommandMap()
     m_commandMap[CmdType::DeleFile] = [this](const QByteArray& body) { DeleFile(body); };
     m_commandMap[CmdType::DownLoadFile] = [this](const QByteArray& body) { DownLoadFile(body); };
     m_commandMap[CmdType::MouseInput] = [this](const QByteArray& body) { HandleMouseEvent(body); };
+    m_commandMap[CmdType::KeyboardInput] = [this](const QByteArray& body) { HandleKeyboardEvent(body); };
     m_commandMap[CmdType::ScreenData] = [this](const QByteArray&) { SendScreen(); };
     m_commandMap[CmdType::LockMachine] = [this](const QByteArray& body) { LockMachine(body); };
     m_commandMap[CmdType::UnLockMachine] = [this](const QByteArray& body) { UnlockMachine(body); };

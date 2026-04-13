@@ -3,6 +3,7 @@
 #include <QByteArray>
 #include <QDataStream>
 #include <QDebug>
+#include <cstdint>
 
 enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     None = 0,
@@ -12,6 +13,7 @@ enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     DeleFile =4,
     DownLoadFile=5,
     MouseInput = 10,
+    KeyboardInput = 11,
     ScreenData = 20,
     LockMachine=30,
     UnLockMachine=31,
@@ -32,6 +34,20 @@ enum class MouseEventType : uint8_t {
     MiddleRelease,// Middle button release
     MiddleDoubleClick, // Middle button double click
     Scroll,       // Mouse scroll
+};
+
+// 键盘事件
+enum class KeyEventType : uint8_t {
+    None = 0,
+    Press,
+    Release
+};
+
+struct KeyEvent {
+    KeyEvent() : eventType(KeyEventType::None), vkCode(0) {}
+
+    KeyEventType eventType; // 键盘事件类型 (占 1 字节)
+    uint32_t vkCode;        // Windows Virtual-Key Code (占 4 字节)
 };
 struct MouseEvent {
     // 构造函数初始化

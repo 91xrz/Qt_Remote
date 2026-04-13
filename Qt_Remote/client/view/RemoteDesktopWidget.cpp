@@ -189,6 +189,24 @@ void RemoteDesktopWidget::wheelEvent(QWheelEvent* event)
     QWidget::wheelEvent(event);
 }
 
+void RemoteDesktopWidget::keyPressEvent(QKeyEvent* event)
+{
+    if (!event->isAutoRepeat()) {
+        emit sigKeyboardInputCaptured(KeyEventType::Press, static_cast<uint32_t>(event->nativeVirtualKey()));
+    }
+    event->accept();
+    QWidget::keyPressEvent(event);
+}
+
+void RemoteDesktopWidget::keyReleaseEvent(QKeyEvent* event)
+{
+    if (!event->isAutoRepeat()) {
+        emit sigKeyboardInputCaptured(KeyEventType::Release, static_cast<uint32_t>(event->nativeVirtualKey()));
+    }
+    event->accept();
+    QWidget::keyReleaseEvent(event);
+}
+
 void RemoteDesktopWidget::sendMouseEvent(MouseEventType type, const QPoint& localPos, int scrollDelta)
 {
     if (m_currentFrame.isNull()) {

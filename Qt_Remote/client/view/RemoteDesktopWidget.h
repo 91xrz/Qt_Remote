@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QElapsedTimer>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
@@ -22,6 +23,7 @@ public slots:
 signals:
     void sigRequestNextFrame();
     void sigMouseInputCaptured(MouseEventType eventType, int x, int y, int scrollDelta);
+    void sigKeyboardInputCaptured(KeyEventType eventType, uint32_t vkCode);
     void sigLockMachineRequested();
     void sigUnlockMachineRequested();
 
@@ -34,6 +36,8 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void wheelEvent(QWheelEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void keyReleaseEvent(QKeyEvent* event) override;
 
 private:
     void sendMouseEvent(MouseEventType type, const QPoint& localPos, int scrollDelta = 0);

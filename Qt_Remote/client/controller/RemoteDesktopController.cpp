@@ -48,6 +48,17 @@ void RemoteDesktopController::setupConnections()
             body.append(reinterpret_cast<const char*>(&mouseEvent), sizeof(MouseEvent));
             m_connection->sendPacket(CmdType::MouseInput, body);
         });
+
+    connect(m_widget, &RemoteDesktopWidget::sigKeyboardInputCaptured, this,
+        [this](KeyEventType eventType, uint32_t vkCode) {
+            KeyEvent keyEvent;
+            keyEvent.eventType = eventType;
+            keyEvent.vkCode = vkCode;
+
+            QByteArray body;
+            body.append(reinterpret_cast<const char*>(&keyEvent), sizeof(KeyEvent));
+            m_connection->sendPacket(CmdType::KeyboardInput, body);
+        });
 }
 
 void RemoteDesktopController::show()
