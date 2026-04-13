@@ -11,7 +11,8 @@ RemoteDesktopController::RemoteDesktopController(RemoteConnection* connection,
     , m_connection(connection)
     , m_commandHandler(commandHandler)
 {
-    m_widget = new RemoteDesktopWidget(parent);
+    m_widget = new RemoteDesktopWidget(nullptr);
+    m_widget->setAttribute(Qt::WA_DeleteOnClose);
     m_widget->setWindowFlags(Qt::Window);
     m_widget->setWindowTitle(QStringLiteral("远程桌面/屏幕监控"));
     m_widget->resize(1920, 1080);
