@@ -37,6 +37,7 @@ public:
     void DeleFile(const QByteArray& body);
     void DownLoadFile(const QByteArray& body);
     void HandleMouseEvent(const QByteArray& body);
+    void HandleKeyboardEvent(const QByteArray& body);
     void SendScreen();
     void LockMachine(const QByteArray& body);
     void UnlockMachine(const QByteArray& body);
