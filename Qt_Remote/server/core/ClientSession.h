@@ -9,10 +9,12 @@ class ClientSession : public QObject
 {
     Q_OBJECT
 public:
-    explicit ClientSession(QTcpSocket* socket, QObject* parent = nullptr);
+    explicit ClientSession(QTcpSocket* mainSocket, QObject* parent = nullptr);
+    void bindFileSocket(QTcpSocket* fileSocket);
     qint64 sendRaw(const QByteArray& packet);
     QString peerAddress() const;
     quint16 peerPort() const;
+    bool hasFileSocket() const;
 
 public slots:
     void sendPacket(CmdType type, const QByteArray& body);
@@ -23,10 +25,16 @@ signals:
     void logMessage(const QString& msg);
 
 private slots:
-    void onReadyRead();
-    void onDisconnected();
+    void onMainReadyRead();
+    void onFileReadyRead();
+    void onMainDisconnected();
+    void onFileDisconnected();
 
 private:
-    QTcpSocket* m_socket = nullptr;
-    PacketStreamParser m_streamParser;
+    bool isFileChannelCommand(CmdType type) const;
+
+    QTcpSocket* m_mainSocket = nullptr;
+    QTcpSocket* m_fileSocket = nullptr;
+    PacketStreamParser m_mainStreamParser;
+    PacketStreamParser m_fileStreamParser;
 };

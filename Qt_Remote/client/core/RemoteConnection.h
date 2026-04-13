@@ -33,10 +33,19 @@ signals:
     void commandReceived(CmdType type, const QByteArray& data);
 
 private slots:
-    void onReadyRead();
+    void onMainSocketConnected();
+    void onFileSocketConnected();
+    void onSocketDisconnected();
+    void onMainSocketReadyRead();
+    void onFileSocketReadyRead();
     void onSocketError(QAbstractSocket::SocketError socketError);
 
 private:
-    QTcpSocket* m_socket = nullptr;
-    PacketStreamParser m_streamParser; // 直接复用 common 里的粘包解析器
+    bool isFileChannelCommand(CmdType type) const;
+    void emitConnectedIfReady();
+
+    QTcpSocket* m_mainSocket = nullptr;
+    QTcpSocket* m_fileSocket = nullptr;
+    PacketStreamParser m_mainStreamParser; // 主通道粘包解析器
+    PacketStreamParser m_fileStreamParser; // 文件通道粘包解析器
 };
