@@ -1,6 +1,4 @@
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTORCC ON)
+
 
 add_executable(server
     main.cpp
@@ -34,6 +32,26 @@ target_link_libraries(server PRIVATE
     Qt6::Widgets
     Qt6::Network
 )
+
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
+    main.cpp
+
+    core/MainController.h
+    core/MainController.cpp
+    core/DeviceServer.h
+    core/DeviceServer.cpp
+    core/ClientSession.h
+    core/ClientSession.cpp
+
+    controller/CommandHandler.h
+    controller/CommandHandler.cpp
+
+    view/ServerWindow.h
+    view/ServerWindow.cpp
+    view/LockScreenWidget.h
+    view/LockScreenWidget.cpp
+)
+
 
 if(MSVC)
     target_compile_options(server PRIVATE /utf-8)
