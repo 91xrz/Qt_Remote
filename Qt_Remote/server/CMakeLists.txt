@@ -31,6 +31,7 @@ target_link_libraries(server PRIVATE
     common
     Qt6::Widgets
     Qt6::Network
+    Qt6::Concurrent
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES
