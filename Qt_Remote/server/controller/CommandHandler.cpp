@@ -1,6 +1,7 @@
 #include "CommandHandler.h"
 #include <windows.h>
 #include <QDateTime>
+#include <QtConcurrent>
 
 CommandHandler::CommandHandler(QObject* parent)
     : QObject(parent)
@@ -12,15 +13,27 @@ void  CommandHandler::onHandlerCommand(CmdType type, QByteArray body)
 {
     // 查找指令
     auto it = m_commandMap.find(type);
-    if (it != m_commandMap.end()) {
-        // 执行对应的回调函数
-        it.value()(body);
-    }
-    else {
-        // 可以加上容错处理
+    if (it == m_commandMap.end()) {
         emit logMessage(QString("【警告】收到未注册的指令类型: %1").arg(static_cast<int>(type)));
+        return;
     }
 
+    // UI/硬件注入相关指令必须在主线程同步执行
+    const bool runOnMainThread = (type == CmdType::MouseInput
+        || type == CmdType::KeyboardInput
+        || type == CmdType::LockMachine
+        || type == CmdType::UnLockMachine
+        || type == CmdType::ScreenData);
+
+    if (runOnMainThread) {
+        it.value()(body);
+        return;
+    }
+
+    // 纯 IO 指令放入线程池执行，避免阻塞主线程
+    QtConcurrent::run([it, body]() {
+        it.value()(body);
+    });
 }
 
 void CommandHandler::MakeDriverInfo()
@@ -352,38 +365,24 @@ void CommandHandler::HandleKeyboardEvent(const QByteArray& body)
 
 void CommandHandler::SendScreen()
 {
-    // 1. 获取系统主屏幕
+    // 1. 主线程：抓取屏幕并转换为可跨线程传递的 QImage
     QScreen* screen = QGuiApplication::primaryScreen();
-    if (!screen) return;
-
-    // 2. 截取全屏
-    QPixmap pixmap = screen->grabWindow(0);
-
-    // 3. 使用 QBuffer 代替 IStream 和 GlobalAlloc
-    QByteArray bytes;
-    QBuffer buffer(&bytes);
-    buffer.open(QIODevice::WriteOnly);
-
-    // 【核心优化】绝对不要用 PNG！改用 JPG，并将画质设为 50-70
-    // JPG 的编码速度极快，且网络包体积会缩小 5-10 倍
-    //貌似PNG的画质更好
-    pixmap.save(&buffer, "JPG", 50);
-
-    //测试代码
-    /*QFile file("test_screen_quality50.jpg");
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(bytes);
-        file.close();
-
-        // 打印出文件大小，方便你评估网络传输压力
-        emit logMessage(QString("【调试】截图已保存！大小: %1 KB").arg(bytes.size() / 1024));
+    if (!screen) {
+        return;
     }
-    else {
-        emit logMessage("【调试】截图保存失败！");
-    }
-    */
-    // 4. 打包发送 
-    emit sendData(CmdType::ScreenData, bytes);
+
+    const QPixmap pixmap = screen->grabWindow(0);
+    const QImage image = pixmap.toImage();
+
+    // 2. 后台线程：执行耗时 JPG 压缩并发送
+    QtConcurrent::run([this, image]() {
+        QByteArray bytes;
+        QBuffer buffer(&bytes);
+        buffer.open(QIODevice::WriteOnly);
+
+        image.save(&buffer, "JPG", 50);
+        emit sendData(CmdType::ScreenData, bytes);
+    });
 }
 
 void CommandHandler::LockMachine(const QByteArray&)
