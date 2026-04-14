@@ -1,6 +1,7 @@
 #include "CommandHandler.h"
 #include <windows.h>
 #include <QDateTime>
+#include <QtConcurrent>
 
 CommandHandler::CommandHandler(QObject* parent)
     : QObject(parent)
@@ -352,7 +353,6 @@ void CommandHandler::HandleKeyboardEvent(const QByteArray& body)
 
 void CommandHandler::SendScreen()
 {
-    // 1. 获取系统主屏幕
     QScreen* screen = QGuiApplication::primaryScreen();
     if (!screen) return;
 
@@ -360,13 +360,12 @@ void CommandHandler::SendScreen()
     QPixmap pixmap = screen->grabWindow(0);
 
     // 3. 使用 QBuffer 代替 IStream 和 GlobalAlloc
-    QByteArray bytes;
-    QBuffer buffer(&bytes);
-    buffer.open(QIODevice::WriteOnly);
+        QByteArray bytes;
+        QBuffer buffer(&bytes);
+        buffer.open(QIODevice::WriteOnly);
 
     // 【核心优化】绝对不要用 PNG！改用 JPG，并将画质设为 50-70
     // JPG 的编码速度极快，且网络包体积会缩小 5-10 倍
-    //貌似PNG的画质更好
     pixmap.save(&buffer, "JPG", 50);
 
     //测试代码
@@ -383,7 +382,7 @@ void CommandHandler::SendScreen()
     }
     */
     // 4. 打包发送 
-    emit sendData(CmdType::ScreenData, bytes);
+        emit sendData(CmdType::ScreenData, bytes);
 }
 
 void CommandHandler::LockMachine(const QByteArray&)

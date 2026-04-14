@@ -14,7 +14,7 @@ FileManagerController::FileManagerController(RemoteConnection* connection,
     , m_commandHandler(commandHandler)
 {
     m_widget = new FileManagerWidget(nullptr);
-    m_widget->setAttribute(Qt::WA_DeleteOnClose);
+    //m_widget->setAttribute(Qt::WA_DeleteOnClose);
     m_widget->setWindowFlags(Qt::Window);
     m_widget->setWindowTitle(QStringLiteral("远程文件管理器"));
     m_widget->resize(900, 560);

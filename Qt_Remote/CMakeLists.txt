@@ -11,7 +11,7 @@ set(CMAKE_AUTORCC ON)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network Concurrent)
 
 add_subdirectory(common)
 add_subdirectory(server)

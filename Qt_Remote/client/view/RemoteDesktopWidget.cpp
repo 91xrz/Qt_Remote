@@ -27,13 +27,20 @@ RemoteDesktopWidget::RemoteDesktopWidget(QWidget* parent)
     });
 }
 
+
+void RemoteDesktopWidget::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+
+    emit sigRequestNextFrame();
+}
 void RemoteDesktopWidget::updateFrame(const QPixmap& pixmap)
 {
     m_currentFrame = pixmap;
     update();
 
     if (isVisible()) {
-        QTimer::singleShot(30, this, [this]() {
+        QTimer::singleShot(1, this, [this]() {
             if (isVisible()) {
                 emit sigRequestNextFrame();
             }
@@ -90,6 +97,8 @@ void RemoteDesktopWidget::closeEvent(QCloseEvent* event)
     m_currentFrame = QPixmap();
     QWidget::closeEvent(event);
 }
+
+
 
 void RemoteDesktopWidget::mousePressEvent(QMouseEvent* event)
 {
