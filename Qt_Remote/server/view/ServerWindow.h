@@ -12,9 +12,11 @@ class ServerWindow : public QWidget
     Q_OBJECT
 public:
     explicit ServerWindow(QWidget* parent = nullptr);
+    QString generatedPassword() const;
 
 signals:
     void sigToggleListenRequested(quint16 port);
+    void sigPasswordGenerated(const QString& password);
 
 public slots:
     void updateStatus(const QString& statusText);
@@ -30,6 +32,8 @@ private:
     QPushButton* m_toggleButton = nullptr;
     QLabel* m_statusLabel = nullptr;
     QLabel* m_onlineLabel = nullptr;
+    QLabel* m_passwordLabel = nullptr;
     QTextEdit* m_logView = nullptr;
     bool m_isListening = false;
+    QString m_generatedPassword;
 };

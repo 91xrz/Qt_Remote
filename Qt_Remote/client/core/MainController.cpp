@@ -29,9 +29,9 @@ MainController::MainController(QObject* parent)
         m_mainWindow, &Qt_Remote::onConnectionError);
 
     connect(m_mainWindow, &Qt_Remote::sigConnectRequested, this,
-        [this](const QString& ip, quint16 port) {
+        [this](const QString& ip, quint16 port, const QString& password) {
             m_mainWindow->setConnectingState(ip, port);
-            m_connection->connectToServer(ip, port);
+            m_connection->connectToServer(ip, port, password);
         });
 
     connect(m_mainWindow, &Qt_Remote::sigDisconnectRequested, this,

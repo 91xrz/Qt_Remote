@@ -21,7 +21,7 @@ public slots:
     void setConnectingState(const QString& ip, quint16 port);
 
 signals:
-    void sigConnectRequested(const QString& ip, quint16 port);
+    void sigConnectRequested(const QString& ip, quint16 port, const QString& password);
     void sigDisconnectRequested();
     void sigOpenFileManagerRequested();
     void sigOpenRemoteDesktopRequested();

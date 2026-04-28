@@ -12,6 +12,7 @@ Qt_Remote::Qt_Remote(QWidget* parent)
 
     connect(ui.btnStartService, &QPushButton::clicked, this, [this]() {
         const QString ip = ui.lineEditTargetIp->text().trimmed();
+        const QString password = ui.lineEditPassword->text().trimmed();
         bool ok = false;
         const quint16 port = ui.lineEditPort->text().trimmed().toUShort(&ok);
 
@@ -30,7 +31,12 @@ Qt_Remote::Qt_Remote(QWidget* parent)
             return;
         }
 
-        emit sigConnectRequested(ip, port);
+        if (password.isEmpty()) {
+            appendLogMessage(QStringLiteral("【输入错误】验证码不能为空"));
+            return;
+        }
+
+        emit sigConnectRequested(ip, port, password);
     });
 
     connect(ui.btnStopService, &QPushButton::clicked, this, [this]() {
@@ -68,6 +74,7 @@ void Qt_Remote::onConnected()
     ui.btnStopService->setEnabled(true);
     ui.lineEditTargetIp->setEnabled(false);
     ui.lineEditPort->setEnabled(false);
+    ui.lineEditPassword->setEnabled(false);
     appendLogMessage(QStringLiteral("已连接到目标主机"));
 }
 
@@ -78,6 +85,7 @@ void Qt_Remote::onDisconnected()
     ui.btnStopService->setEnabled(false);
     ui.lineEditTargetIp->setEnabled(true);
     ui.lineEditPort->setEnabled(true);
+    ui.lineEditPassword->setEnabled(true);
     appendLogMessage(QStringLiteral("已断开连接"));
 }
 
@@ -89,6 +97,7 @@ void Qt_Remote::onConnectionError(const QString& msg)
     ui.btnStopService->setEnabled(false);
     ui.lineEditTargetIp->setEnabled(true);
     ui.lineEditPort->setEnabled(true);
+    ui.lineEditPassword->setEnabled(true);
 }
 
 void Qt_Remote::setConnectingState(const QString& ip, quint16 port)

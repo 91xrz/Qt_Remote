@@ -3,6 +3,7 @@
 #include <QMetaObject>
 #include <QThread>
 #include <QUuid>
+#include <QCryptographicHash>
 #include <cstring>
 
 RemoteConnection::RemoteConnection(QObject* parent)
@@ -21,7 +22,7 @@ RemoteConnection::RemoteConnection(QObject* parent)
     connect(m_fileSocket, &QTcpSocket::errorOccurred, this, &RemoteConnection::onFileSocketError);
 }
 
-void RemoteConnection::connectToServer(const QString& ip, quint16 port)
+void RemoteConnection::connectToServer(const QString& ip, quint16 port, const QString& password)
 {
     if (m_mainSocket->state() == QAbstractSocket::ConnectedState
         || m_fileSocket->state() == QAbstractSocket::ConnectedState) {
@@ -36,6 +37,7 @@ void RemoteConnection::connectToServer(const QString& ip, quint16 port)
 
     m_mainSocket->setProxy(QNetworkProxy::NoProxy);
     m_fileSocket->setProxy(QNetworkProxy::NoProxy);
+    m_password = password;
 
     emit logMessage(QString("正在连接到 %1:%2 ...").arg(ip).arg(port));
     m_mainSocket->connectToHost(ip, port);
@@ -125,6 +127,8 @@ void RemoteConnection::sendAuthPacket(QTcpSocket* socket, SocketRole role)
 
     AuthEvent authEvent;
     std::strncpy(authEvent.machineId, m_machineId.toUtf8().constData(), sizeof(authEvent.machineId) - 1);
+    const QByteArray passwordHash = QCryptographicHash::hash(m_password.toUtf8(), QCryptographicHash::Sha256).toHex();
+    std::strncpy(authEvent.passwordHash, passwordHash.constData(), sizeof(authEvent.passwordHash) - 1);
     authEvent.role = role;
 
     QByteArray body(reinterpret_cast<const char*>(&authEvent), sizeof(AuthEvent));

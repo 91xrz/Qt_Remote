@@ -14,7 +14,7 @@ public:
     explicit RemoteConnection(QObject* parent = nullptr);
 
     // 主动连接被控端
-    void connectToServer(const QString& ip, quint16 port);
+    void connectToServer(const QString& ip, quint16 port, const QString& password);
     // 断开连接
     void disconnectFromServer();
     // 是否在线
@@ -46,6 +46,7 @@ private:
     void processIncomingData(QTcpSocket* socket, PacketStreamParser& parser);
 
     QString m_machineId;
+    QString m_password;
     QTcpSocket* m_mainSocket = nullptr;
     QTcpSocket* m_fileSocket = nullptr;
     PacketStreamParser m_mainParser;
