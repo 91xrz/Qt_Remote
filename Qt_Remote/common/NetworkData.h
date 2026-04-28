@@ -29,10 +29,12 @@ enum class SocketRole : uint8_t {
 
 struct AuthEvent {
     char machineId[64];
+    char passwordHash[65];
     SocketRole role;
 
     AuthEvent() : role(SocketRole::Main) {
         memset(machineId, 0, sizeof(machineId));
+        memset(passwordHash, 0, sizeof(passwordHash));
     }
 };
 

@@ -1,6 +1,7 @@
 #include "core/DeviceServer.h"
 
 #include <QTcpSocket>
+#include <QCryptographicHash>
 #include <cstring>
 #include <memory>
 #include "core/ClientSession.h"
@@ -66,6 +67,12 @@ void DeviceServer::sendToActiveSession(CmdType type, const QByteArray& body)
     m_activeSession->sendPacket(type, body);
 }
 
+void DeviceServer::setExpectedPassword(const QString& password)
+{
+    m_expectedHash = QCryptographicHash::hash(password.toUtf8(), QCryptographicHash::Sha256).toHex();
+    emit logMessage(QStringLiteral("已更新连接验证码哈希"));
+}
+
 void DeviceServer::onNewConnection()
 {
     while (m_server->hasPendingConnections()) {
@@ -103,6 +110,15 @@ void DeviceServer::onNewConnection()
 
             AuthEvent authEvent;
             std::memcpy(&authEvent, authBody.constData(), sizeof(AuthEvent));
+            const QByteArray receivedHash(authEvent.passwordHash,
+                strnlen(authEvent.passwordHash, sizeof(authEvent.passwordHash)));
+            if (receivedHash != m_expectedHash) {
+                emit logMessage(QStringLiteral("密码哈希校验失败，断开连接: %1:%2")
+                    .arg(socket->peerAddress().toString())
+                    .arg(socket->peerPort()));
+                socket->disconnectFromHost();
+                return;
+            }
             const QByteArray machineBytes(authEvent.machineId, strnlen(authEvent.machineId, sizeof(authEvent.machineId)));
             const QString machineId = QString::fromUtf8(machineBytes).trimmed();
 

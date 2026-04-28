@@ -12,6 +12,7 @@ MainController::MainController(QObject* parent)
     m_lockScreenWidget = new LockScreenWidget();
     m_deviceServer = new DeviceServer(this);
     m_commandHandler = new CommandHandler(this);
+    m_deviceServer->setExpectedPassword(m_serverWindow->generatedPassword());
 
     connect(m_serverWindow, &ServerWindow::sigToggleListenRequested, this,
         [this](quint16 port) {
@@ -25,6 +26,8 @@ MainController::MainController(QObject* parent)
                 m_serverWindow->updateListeningState(true, m_deviceServer->listeningPort());
             }
         });
+    connect(m_serverWindow, &ServerWindow::sigPasswordGenerated,
+        m_deviceServer, &DeviceServer::setExpectedPassword);
 
     connect(m_deviceServer, &DeviceServer::logMessage,
         m_serverWindow, &ServerWindow::appendLog);

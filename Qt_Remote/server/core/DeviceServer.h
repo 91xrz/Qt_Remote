@@ -3,6 +3,7 @@
 #include <QObject>
 #include <QTcpServer>
 #include <QHash>
+#include <QByteArray>
 #include "NetworkData.h"
 
 class ClientSession;
@@ -21,6 +22,7 @@ public:
 
 public slots:
     void sendToActiveSession(CmdType type, const QByteArray& body);
+    void setExpectedPassword(const QString& password);
 
 signals:
     void logMessage(const QString& msg);
@@ -40,4 +42,5 @@ private:
     QTcpServer* m_server = nullptr;
     QHash<QString, ClientSession*> m_sessions;
     ClientSession* m_activeSession = nullptr;
+    QByteArray m_expectedHash;
 };

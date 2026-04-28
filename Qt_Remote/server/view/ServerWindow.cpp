@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QRandomGenerator>
 #include <QTextEdit>
 #include <QVBoxLayout>
 
@@ -27,6 +28,9 @@ ServerWindow::ServerWindow(QWidget* parent)
 
     m_statusLabel = new QLabel(QStringLiteral("状态: 未监听"), this);
     m_onlineLabel = new QLabel(QStringLiteral("在线客户端: 0"), this);
+    m_generatedPassword = QString("%1")
+        .arg(QRandomGenerator::global()->bounded(1000000), 6, 10, QLatin1Char('0'));
+    m_passwordLabel = new QLabel(QStringLiteral("本机验证码: %1").arg(m_generatedPassword), this);
 
     controlLayout->addWidget(portLabel);
     controlLayout->addWidget(m_portEdit);
@@ -39,9 +43,16 @@ ServerWindow::ServerWindow(QWidget* parent)
     mainLayout->addLayout(controlLayout);
     mainLayout->addWidget(m_statusLabel);
     mainLayout->addWidget(m_onlineLabel);
+    mainLayout->addWidget(m_passwordLabel);
     mainLayout->addWidget(m_logView, 1);
 
     connect(m_toggleButton, &QPushButton::clicked, this, &ServerWindow::onToggleListenClicked);
+    emit sigPasswordGenerated(m_generatedPassword);
+}
+
+QString ServerWindow::generatedPassword() const
+{
+    return m_generatedPassword;
 }
 
 void ServerWindow::onToggleListenClicked()
