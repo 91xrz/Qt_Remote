@@ -1,7 +1,6 @@
 #include "RemoteDesktopWidget.h"
 
 #include <QPainter>
-#include <QTimer>
 
 RemoteDesktopWidget::RemoteDesktopWidget(QWidget* parent)
     : QWidget(parent)
@@ -38,14 +37,6 @@ void RemoteDesktopWidget::updateFrame(const QPixmap& pixmap)
 {
     m_currentFrame = pixmap;
     update();
-
-    if (isVisible()) {
-        QTimer::singleShot(1, this, [this]() {
-            if (isVisible()) {
-                emit sigRequestNextFrame();
-            }
-        });
-    }
 }
 
 void RemoteDesktopWidget::paintEvent(QPaintEvent* event)
@@ -94,6 +85,7 @@ void RemoteDesktopWidget::mouseMoveEvent(QMouseEvent* event)
 
 void RemoteDesktopWidget::closeEvent(QCloseEvent* event)
 {
+    emit sigStopScreenRequested();
     m_currentFrame = QPixmap();
     QWidget::closeEvent(event);
 }

@@ -17,6 +17,7 @@ enum class CmdType : quint16 { // 改成 quint16，支持更多命令
     MouseInput = 10,
     KeyboardInput = 11,
     ScreenData = 20,
+    StopScreenStream = 21,
     LockMachine=30,
     UnLockMachine=31,
     AuthConnection = 99,
