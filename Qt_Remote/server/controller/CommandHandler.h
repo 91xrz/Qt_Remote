@@ -11,8 +11,6 @@
 #include <QScreen>
 #include <QPixmap>
 #include <QBuffer>
-#include <QFutureWatcher>
-#include <QTimer>
 #include "NetworkData.h"
 
 class CommandHandler : public QObject
@@ -42,20 +40,13 @@ public:
     void HandleCancelDownload(const QByteArray& body);
     void HandleMouseEvent(const QByteArray& body);
     void HandleKeyboardEvent(const QByteArray& body);
-    void StartScreenStream(const QByteArray& body);
-    void StopScreenStream(const QByteArray& body);
+    void SendScreen();
     void LockMachine(const QByteArray& body);
     void UnlockMachine(const QByteArray& body);
 
 private:
-    void OnScreenTimerTimeout();
-    void OnCompressFinished();
-
     QHash<CmdType, ActionFunc> m_commandMap;
     QFile m_currentDownloadFile;
-    QTimer m_screenTimer;
-    QFutureWatcher<QByteArray> m_compressWatcher;
-    bool m_isCompressing = false;
 
     void initCommandMap();
 };
