@@ -6,6 +6,9 @@
 CommandHandler::CommandHandler(QObject* parent)
     : QObject(parent)
 {
+    m_screenTimer.setInterval(33);
+    connect(&m_screenTimer, &QTimer::timeout, this, &CommandHandler::OnScreenTimerTimeout);
+    connect(&m_compressWatcher, &QFutureWatcher<QByteArray>::finished, this, &CommandHandler::OnCompressFinished);
     initCommandMap();
 }
 
@@ -351,38 +354,56 @@ void CommandHandler::HandleKeyboardEvent(const QByteArray& body)
     SendInput(1, &input, sizeof(INPUT));
 }
 
-void CommandHandler::SendScreen()
+void CommandHandler::StartScreenStream(const QByteArray&)
 {
+    if (!m_screenTimer.isActive()) {
+        m_screenTimer.start();
+        emit logMessage("【调试】开始屏幕推流（30 FPS）");
+    }
+}
+
+void CommandHandler::StopScreenStream(const QByteArray&)
+{
+    if (m_screenTimer.isActive()) {
+        m_screenTimer.stop();
+    }
+    emit logMessage("【调试】停止屏幕推流");
+}
+
+void CommandHandler::OnScreenTimerTimeout()
+{
+    if (m_isCompressing) {
+        return;
+    }
+
     QScreen* screen = QGuiApplication::primaryScreen();
-    if (!screen) return;
+    if (!screen) {
+        return;
+    }
 
-    // 2. 截取全屏
-    QPixmap pixmap = screen->grabWindow(0);
+    const QPixmap pixmap = screen->grabWindow(0);
+    const QImage frame = pixmap.toImage();
+    if (frame.isNull()) {
+        return;
+    }
 
-    // 3. 使用 QBuffer 代替 IStream 和 GlobalAlloc
+    m_isCompressing = true;
+    m_compressWatcher.setFuture(QtConcurrent::run([frame]() {
         QByteArray bytes;
         QBuffer buffer(&bytes);
         buffer.open(QIODevice::WriteOnly);
+        frame.save(&buffer, "JPG", 50);
+        return bytes;
+    }));
+}
 
-    // 【核心优化】绝对不要用 PNG！改用 JPG，并将画质设为 50-70
-    // JPG 的编码速度极快，且网络包体积会缩小 5-10 倍
-    pixmap.save(&buffer, "JPG", 50);
-
-    //测试代码
-    /*QFile file("test_screen_quality50.jpg");
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(bytes);
-        file.close();
-
-        // 打印出文件大小，方便你评估网络传输压力
-        emit logMessage(QString("【调试】截图已保存！大小: %1 KB").arg(bytes.size() / 1024));
-    }
-    else {
-        emit logMessage("【调试】截图保存失败！");
-    }
-    */
-    // 4. 打包发送 
+void CommandHandler::OnCompressFinished()
+{
+    const QByteArray bytes = m_compressWatcher.result();
+    m_isCompressing = false;
+    if (!bytes.isEmpty()) {
         emit sendData(CmdType::ScreenData, bytes);
+    }
 }
 
 void CommandHandler::LockMachine(const QByteArray&)
@@ -409,7 +430,8 @@ void CommandHandler::initCommandMap()
     m_commandMap[CmdType::CancelDownload] = [this](const QByteArray& body) { HandleCancelDownload(body); };
     m_commandMap[CmdType::MouseInput] = [this](const QByteArray& body) { HandleMouseEvent(body); };
     m_commandMap[CmdType::KeyboardInput] = [this](const QByteArray& body) { HandleKeyboardEvent(body); };
-    m_commandMap[CmdType::ScreenData] = [this](const QByteArray&) { SendScreen(); };
+    m_commandMap[CmdType::ScreenData] = [this](const QByteArray& body) { StartScreenStream(body); };
+    m_commandMap[CmdType::StopScreenStream] = [this](const QByteArray& body) { StopScreenStream(body); };
     m_commandMap[CmdType::LockMachine] = [this](const QByteArray& body) { LockMachine(body); };
     m_commandMap[CmdType::UnLockMachine] = [this](const QByteArray& body) { UnlockMachine(body); };
 }

@@ -22,6 +22,7 @@ public slots:
 
 signals:
     void sigRequestNextFrame();
+    void sigStopScreenRequested();
     void sigMouseInputCaptured(MouseEventType eventType, int x, int y, int scrollDelta);
     void sigKeyboardInputCaptured(KeyEventType eventType, uint32_t vkCode);
     void sigLockMachineRequested();
