@@ -28,9 +28,6 @@ void RemoteDesktopController::setupConnections()
     connect(m_widget, &RemoteDesktopWidget::sigRequestNextFrame, this, [this]() {
         m_connection->sendPacket(CmdType::ScreenData);
     });
-    connect(m_widget, &RemoteDesktopWidget::sigStopScreenRequested, this, [this]() {
-        m_connection->sendPacket(CmdType::StopScreenStream);
-    });
 
     connect(m_widget, &RemoteDesktopWidget::sigLockMachineRequested, this, [this]() {
         m_connection->sendPacket(CmdType::LockMachine);
